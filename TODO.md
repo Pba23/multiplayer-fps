@@ -1,9 +1,9 @@
 # Task.todo
 
 ## 1. Server Development
-- [ ] **Initialize the Rust project for the server**
-  - [ ] Create a new Rust project for the server.
-  - [ ] Add necessary dependencies (`tokio` for asynchronous handling).
+- [x] **Initialize the Rust project for the server**
+  - [x] Create a new Rust project for the server.
+  - [x] Add necessary dependencies (`tokio` for asynchronous handling).
 - [ ] **Set up the basic UDP server**
   - [ ] Write a basic UDP server that listens on a port and echoes received messages.
 - [ ] **Manage client connections**
@@ -14,15 +14,12 @@
   - [ ] Ensure regular updates of the game state to all connected clients.
 
 ## 2. Client Development
-- [ ] **Initialize the Rust project for the client**
-  - [ ] Create a new Rust project for the client.
-  - [ ] Add necessary dependencies (`bevy` for graphics, `tokio` for network communication).
+- [x] **Initialize the Rust project for the client**
+  - [x] Create a new Rust project for the client.
+  - [x] Add necessary dependencies (`bevy` for graphics, `tokio` for network communication).
 - [ ] **Server connection**
-  - [ ] Implement the logic to connect to the server using the provided IP address and username.
+  - [ ] Implement the logic to connect to the server using the provided IP address and username via console input.
   - [ ] Use `tokio` for asynchronous UDP communication.
-- [ ] **Basic user interface with Bevy**
-  - [ ] Set up a basic Bevy application with a window.
-  - [ ] Create a connection screen to enter the server IP address and username.
 
 ## 3. Game Features Development
 - [ ] **Create mazes and levels**
