@@ -1,3 +1,9 @@
+use bevy::prelude::*;
+mod ui;
+
 fn main() {
-    println!("Hello, world!");
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(ui::ConnectionScreenPlugin)
+        .run();
 }
