@@ -1,53 +1,33 @@
-use std::collections::HashMap;
-use std::net::SocketAddr;
+use serde::{Serialize, Deserialize};
 
-pub struct GameState {
-    players: HashMap<SocketAddr, Player>,
-    current_level: usize,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Player {
+    pub id: u32,
+    pub username: String,
+    pub position: (f32, f32),
 }
 
-pub struct Player {
-    username: String,
-    x: f32,
-    y: f32,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GameState {
+    pub players: Vec<Player>,
 }
 
 impl GameState {
     pub fn new() -> Self {
-        GameState {
-            players: HashMap::new(),
-            current_level: 1,
+        GameState { players: Vec::new() }
+    }
+
+    pub fn add_player(&mut self, player: Player) {
+        self.players.push(player);
+    }
+
+    pub fn remove_player(&mut self, player_id: u32) {
+        self.players.retain(|player| player.id != player_id);
+    }
+
+    pub fn update_player_position(&mut self, player_id: u32, position: (f32, f32)) {
+        if let Some(player) = self.players.iter_mut().find(|p| p.id == player_id) {
+            player.position = position;
         }
-    }
-
-    pub fn add_player(&mut self, addr: SocketAddr, username: String) {
-        let player = Player {
-            username,
-            x: 0.0,
-            y: 0.0,
-        };
-        self.players.insert(addr, player);
-    }
-
-    pub fn remove_player(&mut self, addr: &SocketAddr) {
-        self.players.remove(addr);
-    }
-
-    pub fn update_player_position(&mut self, addr: &SocketAddr, x: f32, y: f32) {
-        if let Some(player) = self.players.get_mut(addr) {
-            player.x = x;
-            player.y = y;
-        }
-    }
-
-    pub fn get_player_positions(&self) -> Vec<(String, f32, f32)> {
-        self.players
-            .iter()
-            .map(|(_, player)| (player.username.clone(), player.x, player.y))
-            .collect()
-    }
-
-    pub fn advance_level(&mut self) {
-        self.current_level += 1;
     }
 }

@@ -5,9 +5,9 @@ pub struct ConnectionScreenPlugin;
 impl Plugin for ConnectionScreenPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ConnectionState>()
-           .add_startup_system(setup_connection_screen)
-           .add_system(button_system)
-           .add_system(text_input_system);
+            .add_startup_system(setup_connection_screen)
+            .add_system(button_system)
+            .add_system(text_input_system);
     }
 }
 
@@ -83,7 +83,12 @@ fn setup_connection_screen(mut commands: Commands, asset_server: Res<AssetServer
             ));
 
             // Connect button
-            spawn_button(parent, asset_server.load("fonts/FiraSans-Bold.ttf"), "Connect", ButtonAction::Connect);
+            spawn_button(
+                parent,
+                asset_server.load("fonts/FiraSans-Bold.ttf"),
+                "Connect",
+                ButtonAction::Connect,
+            );
         });
 }
 
@@ -116,7 +121,10 @@ fn spawn_button(parent: &mut ChildBuilder, font: Handle<Font>, text: &str, actio
 }
 
 fn button_system(
-    mut interaction_query: Query<(&Interaction, &ButtonAction, &mut BackgroundColor), (Changed<Interaction>, With<Button>)>,
+    mut interaction_query: Query<
+        (&Interaction, &ButtonAction, &mut BackgroundColor),
+        (Changed<Interaction>, With<Button>),
+    >,
     mut connection_state: ResMut<ConnectionState>,
 ) {
     for (interaction, action, mut color) in interaction_query.iter_mut() {
@@ -125,9 +133,12 @@ fn button_system(
                 *color = Color::rgb(0.35, 0.75, 0.35).into();
                 match action {
                     ButtonAction::Connect => {
-                        println!("Connecting to {} with username {}", connection_state.ip_address, connection_state.username);
+                        println!(
+                            "Connecting to {} with username {}",
+                            connection_state.ip_address, connection_state.username
+                        );
                         // Here you can add the logic to initiate the connection to the server
-                    },
+                    }
                     _ => {}
                 }
             }
@@ -152,11 +163,11 @@ fn text_input_system(
                 ButtonAction::SetIp => {
                     connection_state.ip_address.push(event.char);
                     text.sections[0].value = connection_state.ip_address.clone();
-                },
+                }
                 ButtonAction::SetUsername => {
                     connection_state.username.push(event.char);
                     text.sections[0].value = connection_state.username.clone();
-                },
+                }
                 _ => {}
             }
         }

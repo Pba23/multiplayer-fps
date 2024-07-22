@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 mod ui;
+mod client;
 
 fn main() {
     App::new()

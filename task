@@ -16,6 +16,7 @@ Sure! Here’s a detailed breakdown of the tasks for both collaborators, with sp
 #### 2. Server Setup
 - **Task:** Initialize the server with basic UDP functionality.
 - **Steps:**
+
   1. In `server/src/main.rs`, set up the Tokio runtime and basic server initialization.
   2. In `server/src/server.rs`, implement the UDP socket binding and basic message handling.
 
