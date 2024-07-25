@@ -1,22 +1,34 @@
 use tokio::net::UdpSocket;
-use tokio::sync::mpsc;
+use tokio::sync::Mutex;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::net::SocketAddr;
 
-mod server;
-mod game_state;
-
 #[tokio::main]
 async fn main() {
-    // Define the server address
-    let addr = "127.0.0.1:8080".parse::<SocketAddr>().unwrap();
+    let socket = UdpSocket::bind("0.0.0.0:8080").await.expect("Could not bind socket");
+    println!("Server listening on port 8080");
 
-    // Create a UDP socket
-    let socket = UdpSocket::bind(addr).await.expect("Could not bind socket");
+    // Store the addresses of connected clients
+    let clients = Arc::new(Mutex::new(HashMap::new()));
 
-    // Log server start
-    println!("Server running on {}", addr);
+    let mut buf = [0; 1024];
 
-    // Run the server
-    server::run(socket).await;
+    loop {
+        let (len, addr) = socket.recv_from(&mut buf).await.expect("Failed to receive data");
+        let msg = String::from_utf8_lossy(&buf[..len]);
+
+        println!("Received from {}: {}", addr, msg);
+
+        let mut clients_guard = clients.lock().await;
+        clients_guard.insert(addr, msg.to_string());
+
+        // Broadcast the message to all clients
+        for (&client_addr, _) in clients_guard.iter() {
+            if client_addr != addr {
+                socket.send_to(&buf[..len], &client_addr).await.expect("Failed to send data");
+            }
+        }
+    }
 }
+//127.0.0.1:8080
