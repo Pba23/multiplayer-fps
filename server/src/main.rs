@@ -4,31 +4,41 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::net::SocketAddr;
 
+mod server;
+use server::*;
 #[tokio::main]
 async fn main() {
-    let socket = UdpSocket::bind("0.0.0.0:8080").await.expect("Could not bind socket");
-    println!("Server listening on port 8080");
+    let mut  server = Server::new().await;
+    
+    server.accept().await;
 
-    // Store the addresses of connected clients
-    let clients = Arc::new(Mutex::new(HashMap::new()));
+    println!("hello")
 
-    let mut buf = [0; 1024];
+    // let socket = UdpSocket::bind("0.0.0.0:8080").await.expect("Could not bind socket");
+    // println!("Server listening on port 8080");
 
-    loop {
-        let (len, addr) = socket.recv_from(&mut buf).await.expect("Failed to receive data");
-        let msg = String::from_utf8_lossy(&buf[..len]);
+    // // Store the addresses of connected clients
+    // let clients = Arc::new(Mutex::new(HashMap::new()));
 
-        println!("Received from {}: {}", addr, msg);
+    // let mut buf = [0; 1024];
 
-        let mut clients_guard = clients.lock().await;
-        clients_guard.insert(addr, msg.to_string());
+    // loop {
+    //     println!("wait");
+    //     let (len, addr) = socket.recv_from(&mut buf).await.expect("Failed to receive data");
+    //     println!("receive");
+    //     let msg = String::from_utf8_lossy(&buf[..len]);
 
-        // Broadcast the message to all clients
-        for (&client_addr, _) in clients_guard.iter() {
-            if client_addr != addr {
-                socket.send_to(&buf[..len], &client_addr).await.expect("Failed to send data");
-            }
-        }
-    }
+    //     println!("Received from {}: {}", addr, msg);
+
+    //     let mut clients_guard = clients.lock().await;
+    //     clients_guard.insert(addr, msg.to_string());
+
+    //     // Broadcast the message to all clients
+    //     for (&client_addr, _) in clients_guard.iter() {
+    //         if client_addr != addr {
+    //             socket.send_to(&buf[..len], &client_addr).await.expect("Failed to send data");
+    //         }
+    //     }
+    // }
 }
 //127.0.0.1:8080
