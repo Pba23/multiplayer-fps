@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     io::{self, Write},
-    net::{SocketAddr, UdpSocket},
+    net::{SocketAddr, UdpSocket}, thread, time::Duration,
 };
 use serde_json::from_str;
 
@@ -50,7 +50,8 @@ pub struct Message {
     action : String,
     level : Option<u32>,
     players : Option<Vec<Player>>,
-    curr_player : Option<Player>
+    curr_player : Option<Player>,
+    position : Option<Vec3>
 }
 
 // Entry point
@@ -95,13 +96,16 @@ fn main() {
     // Capture username and IP address from the terminal
     let username = prompt("Enter your username: ");
     let ip_address = prompt("Enter server IP address: ");
+
     let socket = UdpSocket::bind("0.0.0.0:0").unwrap(); // "0" signifie que le système choisit un port libre
     let mes = username.as_bytes();
     socket.send_to(mes, ip_address.clone()).expect("failed to connect");
+
+    
     
     println!("Waitig for te game to start");
     let mut buf = [0; 1024];
-    let mut mess = Message{action : String::new() , level : None , players : None , curr_player : None};
+    let mut mess = Message{action : String::new() , level : None , players : None , curr_player : None , position : None};
 
     loop {
         let (c, addr) = socket.recv_from(&mut buf).unwrap();
@@ -114,6 +118,22 @@ fn main() {
             break;
         }
     }
+
+    // Start a thread to listen for messages from the server
+    let socket_clone = socket.try_clone().expect("Failed to clone socket");
+    thread::spawn(move || loop {
+        let mut buf = [0; 1024];
+        if let Ok((amt, _)) = socket_clone.recv_from(&mut buf) {
+            println!("QQQQQ {:?}", String::from_utf8_lossy(&buf[..amt]));
+            // let msg = String::from_utf8_lossy(&buf[..len]);
+
+            if let Ok(message) = bincode::deserialize::<Message>(&buf[..amt]) {
+                print!("BASTIENT A TORD{:?}", message)
+            }
+        }
+        thread::sleep(Duration::from_millis(10));
+    });
+
     
     App::new()
         .add_plugins(DefaultPlugins)
@@ -130,6 +150,7 @@ fn main() {
         .add_system(update_radar)
         .run();
 }
+
 fn getcurrplayer(m : Message, s : String) -> Option<Player> {
     let id_current = s.split(":").last()?;
     let c = m.players.unwrap();

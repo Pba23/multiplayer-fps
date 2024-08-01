@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use serde_json::from_str;
 use std::net::SocketAddr;
 use std::time::{Duration, Instant };
 use tokio::time::timeout;
@@ -21,6 +22,7 @@ struct GameState {
 enum PlayerInput {
     Move { id: u32, direction: (u32, u32) },
 }
+
 pub type Client = Player;
 
 #[derive(Debug)]
@@ -34,12 +36,19 @@ pub struct Server {
 pub struct Message {
     action : String,
     level : Option<u32>,
-    players : Option<Vec<Player>>
+    players : Option<Vec<Player>>,
+    position : Option<Vec3>
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct  Vec3 {
+    x : f32 , 
+    y : f32,
+    z : f32
+}
 impl Message {
     fn new(action : String , level : Option<u32> , players : Option<Vec<Player>> ) -> Self {
-        Self { action, level, players }
+        Self { action, level,  players   , position : None}
     }
 }
 
@@ -98,11 +107,17 @@ impl Server {
         loop {
             let (c, addr) = self.socket.recv_from(&mut buf).await.unwrap();
             
-            let c : Vec<&Client> = self.clients.iter().filter(|c| c.addr == addr).collect();
-            if let Some(c) = c.first() {
-                println!("receive message from {:?}",  c);
+            let cl : Vec<&Client> = self.clients.iter().filter(|c| c.addr == addr).collect();
+            if let Some(pl) = cl.first() {
+                let msg = String::from_utf8_lossy(&buf[..c]);
+                
+                let mut mess = Message::new(String::new(), None, None);
+                mess = from_str(&msg).expect("ERROR");
+                println!("receive message from {:?}  {:?}", pl.username ,  mess);
+                
+                self.broadcast(Message::new("move".to_string(), None, None)).await;
             }
-
+ 
         }
     }
 

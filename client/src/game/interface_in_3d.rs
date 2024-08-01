@@ -1,6 +1,6 @@
 // use crate::maze;
 pub use bevy::prelude::*;
-use crate::{game::maze::*, ServerDetails};
+use crate::{game::maze::*, Message, ServerDetails};
 use bevy::input::gamepad::{Gamepad, GamepadAxisChangedEvent, GamepadButtonChangedEvent, GamepadButtonType, GamepadConnectionEvent, GamepadEvent};
 pub const WALL_SIZE: f32 = 7.0; // Taille du mur
 
@@ -155,6 +155,7 @@ pub fn player_movement(
     axes: Res<Axis<GamepadAxis>>,
     buttons: Res<Input<GamepadButton>>,
     mut button_evr: EventReader<GamepadButtonChangedEvent>,
+    global_data : Res<ServerDetails>
 ) {
     let mut direction = Vec3::ZERO;
     let mut rotation = Quat::IDENTITY;
@@ -221,7 +222,7 @@ pub fn player_movement(
     // Vérifier les collisions
     let wall_query = param_set.p1();
     if !will_collide_with_wall(new_position, &wall_query) {
-        println!("the new position {:?}" , new_position);
+        // println!("the new position {:?}" , new_position);
         // Deuxième passe : appliquer les changements
         let mut binding = param_set.p0();
         let mut player_transform = binding.single_mut();
@@ -229,7 +230,10 @@ pub fn player_movement(
         player_transform.rotation = rotation;
         
         // send new position to the server
-        
+        let mut mes = Message{action : String::from("move") , level : None , players : None , curr_player : None, position: Some(new_position)};
+        let json_data = serde_json::to_string(&mes).unwrap();
+
+        global_data.socket.send_to(json_data.as_bytes(), global_data.ip_address.clone());
     }
 }
 pub fn will_collide_with_wall(
