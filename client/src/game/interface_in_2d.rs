@@ -1,6 +1,6 @@
 pub use bevy::prelude::*;
 use crate::game::interface_in_3d::*;
-use crate::game::maze::*;
+use crate::{game::maze::*, ServerDetails};
 
 // use crate::labyrinths;
 // pub use labyrinths::*;
@@ -12,7 +12,11 @@ pub struct RadarWall;
 
 #[derive(Component)]
 pub struct RadarPlayer;
-pub fn setup_radar(mut commands: Commands, _asset_server: Res<AssetServer>) {
+
+#[derive(Component)]
+pub struct RadarOtherPlayer;
+
+pub fn setup_radar(mut commands: Commands, _asset_server: Res<AssetServer>, global_data : Res<ServerDetails>) {
     let radar_size = 200.0;
     let cell_size = radar_size / LABYRINTH_WIDTH as f32;
 
@@ -31,7 +35,7 @@ pub fn setup_radar(mut commands: Commands, _asset_server: Res<AssetServer>) {
         .insert(RadarBackground);
 
     // Walls
-    let labyrinth = generate_labyrinth(2);
+    let labyrinth = generate_labyrinth(1);
     for (y, row) in labyrinth.iter().enumerate().rev() {
         for (x, &cell) in row.iter().enumerate().rev() {
             if cell == 1 {

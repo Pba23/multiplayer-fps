@@ -2,15 +2,17 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     io::{self, Write},
-    net::UdpSocket,
+    net::{SocketAddr, UdpSocket},
 };
-use tokio::sync::mpsc;
+use serde_json::from_str;
 
 // Structs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
-    id: u32,
-    position: Vec2,
+    pub id: u32,
+    pub position: (u32 , u32),
+    pub addr: SocketAddr,
+    pub username : String
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,13 +27,14 @@ enum PlayerInput {
 }
 
 // Implement the Resource trait for ServerDetails
-#[derive(Resource)]
-struct ServerDetails {
-    ip_address: String,
-    username: String,
+#[derive(Resource , Debug)]
+pub struct ServerDetails {
+    pub ip_address: String,
+    pub username: String,
     // state_rx: mpsc::Receiver<GameState>,
     // input_tx: mpsc::Sender<PlayerInput>,
-    socket: UdpSocket,
+    pub socket: UdpSocket,
+    pub mess : Message
 }
 
 // Define the states for the game
@@ -40,6 +43,14 @@ enum LocalGameState {
     #[default]
     Connecting,
     Playing,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Message {
+    action : String,
+    level : Option<u32>,
+    players : Option<Vec<Player>>,
+    curr_player : Option<Player>
 }
 
 // Entry point
@@ -87,12 +98,30 @@ fn main() {
     let socket = UdpSocket::bind("0.0.0.0:0").unwrap(); // "0" signifie que le système choisit un port libre
     let mes = username.as_bytes();
     socket.send_to(mes, ip_address.clone()).expect("failed to connect");
+    
+    println!("Waitig for te game to start");
+    let mut buf = [0; 1024];
+    let mut mess = Message{action : String::new() , level : None , players : None , curr_player : None};
+
+    loop {
+        let (c, addr) = socket.recv_from(&mut buf).unwrap();
+        println!("ADDRESS => {:?}", socket.local_addr());
+        let msg  = String::from_utf8_lossy(&buf[..c]).to_string();
+        mess = from_str(&msg).expect("ERROR");
+        println!("reveived mes : {:?}" , mess);
+        if mess.action == "start" {
+            mess.curr_player = getcurrplayer(mess.clone() , socket.local_addr().unwrap().to_string());
+            break;
+        }
+    }
+    
     App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(ServerDetails {
             ip_address,
             username,
-            socket
+            socket,
+            mess
         })
         .add_startup_system(setup)
         .add_startup_system(setup_radar)
@@ -100,6 +129,17 @@ fn main() {
         .add_system(camera_follow_player)
         .add_system(update_radar)
         .run();
+}
+fn getcurrplayer(m : Message, s : String) -> Option<Player> {
+    let id_current = s.split(":").last()?;
+    let c = m.players.unwrap();
+    
+    for pl in c {
+        if pl.addr.to_string().ends_with(id_current) {
+            return  Some(pl);
+        }
+    }
+    None
 }
 
 // Prompt function to capture user input from the terminal

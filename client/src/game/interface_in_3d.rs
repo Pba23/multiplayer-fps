@@ -1,9 +1,14 @@
 // use crate::maze;
 pub use bevy::prelude::*;
-use crate::game::maze::*;
-pub const WALL_SIZE: f32 = 2.0; // Taille du mur
+use crate::{game::maze::*, ServerDetails};
+use bevy::input::gamepad::{Gamepad, GamepadAxisChangedEvent, GamepadButtonChangedEvent, GamepadButtonType, GamepadConnectionEvent, GamepadEvent};
+pub const WALL_SIZE: f32 = 7.0; // Taille du mur
 
 #[derive(Component)]
+pub struct OtherPlayer;
+
+#[derive(Component)]
+
 pub struct Player;
 
 #[derive(Component)]
@@ -17,7 +22,9 @@ pub fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
+    global_data : Res<ServerDetails>
 ) {
+    println!("GLOBAL VARIABLES {:?}" , global_data);
     // Define colors for player, wall, and floor
     let player_color = Color::rgb(0.0, 1.0, 0.0); // Green
     let wall_color = Color::rgb(0.1, 0.1, 0.1); // black
@@ -38,7 +45,7 @@ pub fn setup(
     });
 
     // Setup player entity
-    let labyrinth = generate_labyrinth(2);
+    let labyrinth = generate_labyrinth(global_data.mess.level.unwrap() as u8);
     // Find starting positions (positions with value 2)
     let mut starting_positions = Vec::new();
     for (y, row) in labyrinth.iter().enumerate() {
@@ -52,19 +59,38 @@ pub fn setup(
     // Choose a random starting position
     // use rand::seq::SliceRandom;
     // let mut rng = rand::thread_rng();
-    let (start_x, start_y) = starting_positions[0];
-    // Setup player entity at the chosen starting position
-    commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Cube { size: 0. })),
-            material: player_material,
-            transform: Transform {
-                translation: Vec3::new(start_x as f32 * WALL_SIZE, 0.5, -(start_y as f32) * WALL_SIZE),
+    
+    // let (start_x, start_y) = starting_positions[global_data.mess.curr_player.clone().unwrap().id as usize -1 ];
+    // Setup player entity at the chosen starting position 
+    for pl in &global_data.mess.players.clone().unwrap() {
+        let (start_x, start_y) = starting_positions[pl.id as usize -1 ];
+        
+        if pl.id == global_data.mess.clone().curr_player.unwrap().id {
+            commands
+            .spawn(PbrBundle {
+                mesh: meshes.add(Mesh::from(shape::Cube { size: 2. })),
+                material: player_material.clone(),
+                transform: Transform {
+                    translation: Vec3::new(start_x as f32 * WALL_SIZE, 0.5, -(start_y as f32) * WALL_SIZE),
+                    ..default()
+                },
                 ..default()
-            },
-            ..default()
-        })
-        .insert(Player);
+            })
+            .insert(Player);
+        } else {
+            commands
+                .spawn(PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::Cube { size: 2. })),
+                    material: player_material.clone(),
+                    transform: Transform {
+                        translation: Vec3::new(start_x as f32 * WALL_SIZE, 0.5, -(start_y as f32) * WALL_SIZE),
+                        ..default()
+                    },
+                    ..default()
+                })
+                .insert(OtherPlayer);
+        }
+    }
 
     // Create entities for the labyrinth
     for y in 0..LABYRINTH_HEIGHT {
@@ -125,10 +151,14 @@ pub fn player_movement(
         Query<&mut Transform, With<Player>>,
         Query<&Transform, With<Wall>>,
     )>,
+    mut gamepad_evr: EventReader<GamepadEvent>,
+    axes: Res<Axis<GamepadAxis>>,
+    buttons: Res<Input<GamepadButton>>,
+    mut button_evr: EventReader<GamepadButtonChangedEvent>,
 ) {
     let mut direction = Vec3::ZERO;
-    let mut rotation;
-    let current_position;
+    let mut rotation = Quat::IDENTITY;
+    let mut current_position = Vec3::ZERO;
 
     // Première passe : lire la position et la rotation du joueur
     {
@@ -138,7 +168,9 @@ pub fn player_movement(
         rotation = player_transform.rotation;
     }
 
+    // Gestion des entrées clavier
     if keyboard_input.pressed(KeyCode::Up) {
+        println!("keyup");
         direction.z -= 1.0;
     }
     if keyboard_input.pressed(KeyCode::Down) {
@@ -151,25 +183,53 @@ pub fn player_movement(
         rotation *= Quat::from_rotation_y(-0.05);
     }
 
-    if direction != Vec3::ZERO {
-        let speed = WALL_SIZE; // Vitesse de déplacement en unités par seconde
-        let movement = rotation * (direction.normalize() * speed * time.delta_seconds());
-        let new_position = current_position + movement;
+    // Gestion des entrées gamepad
+    let gamepad = Gamepad::new(0);
 
-        // Vérifier les collisions
-        let wall_query = param_set.p1();
-        if !will_collide_with_wall(new_position, &wall_query) {
-            // Deuxième passe : appliquer les changements
-            let mut binding = param_set.p0();
-            let mut player_transform = binding.single_mut();
-            player_transform.translation = new_position;
-            player_transform.rotation = rotation;
+    if buttons.just_pressed(GamepadButton::new(gamepad, GamepadButtonType::RightTrigger)) {
+        println!("SHOOT");
+    }
+    for button_event in button_evr.iter() {
+        if button_event.value == 1.0 { 
+            println!("Button pressed: {:?}", button_event.button_type);
         }
-    } else if rotation != Quat::IDENTITY {
-        // Appliquer seulement la rotation si nécessaire
+    }
+
+
+    // Mouvement avec le stick analogique gauche
+    if let Some(x_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::LeftStickX)) {
+        direction.x += x_axis;
+    }
+    if let Some(y_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::LeftStickY)) {
+        direction.z -= y_axis;
+    }
+
+    // Rotation avec le stick analogique droit
+    if let Some(x_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::RightStickX)) {
+        rotation *= Quat::from_rotation_y(-x_axis * 0.05);
+    }
+
+    // Normaliser la direction pour un mouvement cohérent en diagonale
+    if direction != Vec3::ZERO {
+        direction = direction.normalize();
+    }
+
+    let speed = WALL_SIZE; // Vitesse de déplacement en unités par seconde
+    let movement = rotation * (direction * speed * time.delta_seconds());
+    let new_position = current_position + movement;
+
+    // Vérifier les collisions
+    let wall_query = param_set.p1();
+    if !will_collide_with_wall(new_position, &wall_query) {
+        println!("the new position {:?}" , new_position);
+        // Deuxième passe : appliquer les changements
         let mut binding = param_set.p0();
         let mut player_transform = binding.single_mut();
+        player_transform.translation = new_position;
         player_transform.rotation = rotation;
+        
+        // send new position to the server
+        
     }
 }
 pub fn will_collide_with_wall(
@@ -206,7 +266,7 @@ pub fn camera_follow_player(
             let forward = player_transform.forward();
 
             // Positionnez un point de focus légèrement devant le joueur
-            let focus_point = player_transform.translation + forward * 5.0; // Le '2.0' détermine la distance du point de focus
+            let focus_point = player_transform.translation + forward * 10.0; // Le '2.0' détermine la distance du point de focus
 
             // Faites regarder la caméra vers ce point de focus
             camera_transform.look_at(focus_point, Vec3::Y);

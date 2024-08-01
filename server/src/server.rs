@@ -1,16 +1,15 @@
-use tokio::sync::mpsc;
 use serde::{Serialize, Deserialize};
-use std::net::{SocketAddr};
+use std::net::SocketAddr;
 use std::time::{Duration, Instant };
 use tokio::time::timeout;
-use std::io;
 use tokio::net::UdpSocket;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Player {
-    id: u32,
-    position: (u32 , u32),
-    addr: SocketAddr
+pub struct Player {
+    pub id: u32,
+    pub position: (u32 , u32),
+    pub addr: SocketAddr,
+    pub username : String
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,20 +21,28 @@ struct GameState {
 enum PlayerInput {
     Move { id: u32, direction: (u32, u32) },
 }
+pub type Client = Player;
 
 #[derive(Debug)]
 pub struct Server {
     pub  socket : UdpSocket,
-    pub  clients: Vec<Player>,
+    pub  clients: Vec<Client>,
     timer : Instant
 }
 
-#[derive(Debug)]
-struct Client {
-    addr: SocketAddr,
-    tx: mpsc::Sender<GameState>,
-    rx: mpsc::Receiver<PlayerInput>,
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Message {
+    action : String,
+    level : Option<u32>,
+    players : Option<Vec<Player>>
 }
+
+impl Message {
+    fn new(action : String , level : Option<u32> , players : Option<Vec<Player>> ) -> Self {
+        Self { action, level, players }
+    }
+}
+
 
 impl Server {
     pub async fn new() -> Self {
@@ -51,7 +58,7 @@ impl Server {
         loop {
             // println!("wait");
     
-            // Timeout de 30 secondes pour l'appel à recv_from
+            // Timeout de 1 secondes pour l'appel à recv_from
             let recv_result = timeout(Duration::from_secs(1), self.socket.recv_from(&mut buf)).await;
     
             match recv_result {
@@ -61,21 +68,12 @@ impl Server {
                     println!("Received from {}: {}", addr, msg);
     
                     let new_player = Player {
-                        id: self.clients.len() as u32 + 1,
+                        id: self.clients.len() as u32 + 1, 
                         position: (0, 0),
                         addr,
+                        username : msg.to_string()
                     };
                     self.clients.push(new_player.clone());
-    
-                    // Broadcast the message to all clients
-                    for client in self.clients.iter() {
-                        if client.addr != new_player.addr {
-                            self.socket
-                                .send_to(&buf[..len], &client.addr)
-                                .await
-                                .expect("Failed to send data");
-                        }
-                    }
                 }
                 Ok(Err(e)) => {
                     eprintln!("Failed to receive data: {:?}", e);
@@ -84,14 +82,27 @@ impl Server {
                     // println!("Timeout after 1 seconds of waiting");
                     if self.clients.len() < 2 {
                         self.timer = Instant::now()
-                    } else if self.timer.elapsed() > Duration::from_secs(30) {
+                    } else if self.timer.elapsed() > Duration::from_secs(10) {
                         println!("finish");
+                        self.broadcast(Message::new("start".to_string(), Some(1), Some(self.clients.clone()))).await;
                         break;
                     }
                 }
             }
     
             // println!("clients: {:?}", self.clients);
+        }
+    }
+    pub async fn listen(&self)  {
+        let mut buf = [0; 1024];
+        loop {
+            let (c, addr) = self.socket.recv_from(&mut buf).await.unwrap();
+            
+            let c : Vec<&Client> = self.clients.iter().filter(|c| c.addr == addr).collect();
+            if let Some(c) = c.first() {
+                println!("receive message from {:?}",  c);
+            }
+
         }
     }
 
@@ -119,11 +130,16 @@ impl Server {
     //     }
     // }
 
-    // async fn broadcast_state(&self) {
-    //     for client in &self.clients {
-    //         client.tx.send(self.state.clone()).await.unwrap();
-    //     }
-    // }
+    async fn broadcast(&self , mes : Message) {
+         // Broadcast the message to all clients
+         let json_data = serde_json::to_string(&mes).unwrap();
+         for client in self.clients.iter() {
+                self.socket
+                    .send_to(json_data.as_bytes(), &client.addr)
+                    .await
+                    .expect("Failed to send data");
+        }
+    }
 }
 
 // impl Client {
