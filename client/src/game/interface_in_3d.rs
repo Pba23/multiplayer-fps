@@ -1,7 +1,10 @@
+use bevy::asset::LoadState;
 // use crate::maze;
-pub use bevy::prelude::*;
 use crate::{game::maze::*, Message, ServerDetails};
-use bevy::input::gamepad::{Gamepad, GamepadAxisChangedEvent, GamepadButtonChangedEvent, GamepadButtonType, GamepadConnectionEvent, GamepadEvent};
+pub use bevy::gltf::Gltf;
+pub use bevy::gltf::GltfMesh;
+use bevy::input::gamepad::{GamepadButtonChangedEvent, GamepadEvent};
+pub use bevy::prelude::*;
 pub const WALL_SIZE: f32 = 7.0; // Taille du mur
 
 #[derive(Component)]
@@ -18,20 +21,48 @@ pub struct Wall;
 pub struct MainCamera;
 pub const LABYRINTH_WIDTH: usize = 20;
 pub const LABYRINTH_HEIGHT: usize = 20;
+pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let player_model =
+        asset_server.load("/home/student/multiplayer-fps/client/src/assets/Soldier.glb#Scene0");
+    commands.insert_resource(PlayerModel(Some(player_model)));
+}
+
+#[derive(Resource,Default)]
+pub struct PlayerModel(Option<Handle<Scene>>);
+pub fn check_model_loaded(player_model: Res<PlayerModel>, asset_server: Res<AssetServer>) {
+    if let Some(handle) = &player_model.0 {
+        match asset_server.get_load_state(handle) {
+            LoadState::Loading => println!("Le modèle est en cours de chargement..."),
+            LoadState::Loaded => println!("Le modèle est chargé avec succès!"),
+            LoadState::Failed => println!("Échec du chargement du modèle!"),
+            LoadState::Unloaded => println!("Le modèle n'est pas chargé."),
+            _ => println!("autreeeee"),
+        }
+    } else {
+        println!("Aucun modèle n'est assigné.");
+    }
+}
+pub fn debug_scene_entities(query: Query<Entity, With<Handle<Scene>>>) {
+    for entity in query.iter() {
+        println!("Entité avec SceneBundle trouvée: {:?}", entity);
+    }
+}
+
 pub fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    global_data : Res<ServerDetails>
+    global_data: Res<ServerDetails>,
+    player_model: Res<PlayerModel>,
 ) {
-    println!("GLOBAL VARIABLES {:?}" , global_data);
+    println!("GLOBAL VARIABLES {:?}", global_data);
     // Define colors for player, wall, and floor
     let player_color = Color::rgb(0.0, 1.0, 0.0); // Green
     let wall_color = Color::rgb(0.1, 0.1, 0.1); // black
     let floor_color = Color::rgb(0.95, 0.95, 0.95); // Light grey
 
     // Create materials
-    let player_material = materials.add(StandardMaterial {
+    let _player_material = materials.add(StandardMaterial {
         base_color: player_color,
         ..Default::default()
     });
@@ -59,36 +90,52 @@ pub fn setup(
     // Choose a random starting position
     // use rand::seq::SliceRandom;
     // let mut rng = rand::thread_rng();
-    
+
     // let (start_x, start_y) = starting_positions[global_data.mess.curr_player.clone().unwrap().id as usize -1 ];
-    // Setup player entity at the chosen starting position 
+    // Setup player entity at the chosen starting position
     for pl in &global_data.mess.players.clone().unwrap() {
-        let (start_x, start_y) = starting_positions[pl.id as usize -1 ];
+        let (start_x, start_y) = starting_positions[pl.id as usize - 1];
         
-        if pl.id == global_data.mess.clone().curr_player.unwrap().id {
-            commands
-            .spawn(PbrBundle {
-                mesh: meshes.add(Mesh::from(shape::Cube { size: 2. })),
-                material: player_material.clone(),
+        if let Some(model) = &player_model.0 {
+            println!("Tentative d'utilisation du modèle GLB pour le joueur");
+            let mut entity = commands.spawn(SceneBundle {
+                scene: model.clone(),
                 transform: Transform {
-                    translation: Vec3::new(start_x as f32 * WALL_SIZE, 0.5, -(start_y as f32) * WALL_SIZE),
-                    ..default()
+                    translation: Vec3::new(start_x as f32 * WALL_SIZE, 1.0, -(start_y as f32) * WALL_SIZE), // Augmentez y pour élever le modèle
+                    scale: Vec3::splat(1.0), // Ajustez l'échelle si nécessaire
+                    ..Default::default()
                 },
-                ..default()
-            })
-            .insert(Player);
+                ..Default::default()
+            });
+
+            if pl.id == global_data.mess.clone().curr_player.unwrap().id {
+                entity.insert(Player);
+                println!("Joueur principal créé avec modèle GLB");
+            } else {
+                entity.insert(OtherPlayer);
+                println!("Autre joueur créé avec modèle GLB");
+            }
         } else {
-            commands
-                .spawn(PbrBundle {
-                    mesh: meshes.add(Mesh::from(shape::Cube { size: 2. })),
-                    material: player_material.clone(),
-                    transform: Transform {
-                        translation: Vec3::new(start_x as f32 * WALL_SIZE, 0.5, -(start_y as f32) * WALL_SIZE),
-                        ..default()
-                    },
-                    ..default()
-                })
-                .insert(OtherPlayer);
+            // Fallback to a cube if the model isn't loaded yet
+            let mut entity = commands.spawn(PbrBundle {
+                mesh: meshes.add(Mesh::from(shape::Cube { size: 2.0 })),
+                material: materials.add(Color::rgb(0.0, 1.0, 0.0).into()),
+                transform: Transform {
+                    translation: Vec3::new(
+                        start_x as f32 * WALL_SIZE,
+                        0.5,
+                        -(start_y as f32) * WALL_SIZE,
+                    ),
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
+
+            if pl.id == global_data.mess.clone().curr_player.unwrap().id {
+                entity.insert(Player);
+            } else {
+                entity.insert(OtherPlayer);
+            }
         }
     }
 
@@ -101,7 +148,11 @@ pub fn setup(
                         mesh: meshes.add(Mesh::from(shape::Cube { size: WALL_SIZE })),
                         material: wall_material.clone(),
                         transform: Transform {
-                            translation: Vec3::new(x as f32 * WALL_SIZE, 0.5, -(y as f32) * WALL_SIZE),
+                            translation: Vec3::new(
+                                x as f32 * WALL_SIZE,
+                                0.5,
+                                -(y as f32) * WALL_SIZE,
+                            ),
                             ..default()
                         },
                         ..default()
@@ -151,15 +202,15 @@ pub fn player_movement(
         Query<&mut Transform, With<Player>>,
         Query<&Transform, With<Wall>>,
     )>,
-    mut gamepad_evr: EventReader<GamepadEvent>,
+    _gamepad_evr: EventReader<GamepadEvent>,
     axes: Res<Axis<GamepadAxis>>,
     buttons: Res<Input<GamepadButton>>,
     mut button_evr: EventReader<GamepadButtonChangedEvent>,
-    global_data : Res<ServerDetails>
+    global_data: Res<ServerDetails>,
 ) {
     let mut direction = Vec3::ZERO;
-    let mut rotation = Quat::IDENTITY;
-    let mut current_position = Vec3::ZERO;
+    let mut rotation: Quat;
+    let current_position: Vec3;
 
     // Première passe : lire la position et la rotation du joueur
     {
@@ -191,11 +242,10 @@ pub fn player_movement(
         println!("SHOOT");
     }
     for button_event in button_evr.iter() {
-        if button_event.value == 1.0 { 
+        if button_event.value == 1.0 {
             println!("Button pressed: {:?}", button_event.button_type);
         }
     }
-
 
     // Mouvement avec le stick analogique gauche
     if let Some(x_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::LeftStickX)) {
@@ -228,12 +278,20 @@ pub fn player_movement(
         let mut player_transform = binding.single_mut();
         player_transform.translation = new_position;
         player_transform.rotation = rotation;
-        
+
         // send new position to the server
-        let mut mes = Message{action : String::from("move") , level : None , players : None , curr_player : None, position: Some(new_position)};
+        let mes = Message {
+            action: String::from("move"),
+            level: None,
+            players: None,
+            curr_player: None,
+            position: Some(new_position),
+        };
         let json_data = serde_json::to_string(&mes).unwrap();
 
-        global_data.socket.send_to(json_data.as_bytes(), global_data.ip_address.clone());
+        let _ = global_data
+            .socket
+            .send_to(json_data.as_bytes(), global_data.ip_address.clone());
     }
 }
 pub fn will_collide_with_wall(
@@ -263,7 +321,7 @@ pub fn camera_follow_player(
     if let Ok(player_transform) = player_query.get_single() {
         for mut camera_transform in camera_query.iter_mut() {
             // Positionnez la caméra juste au-dessus de la tête du joueur
-            let camera_offset = Vec3::new(0.0, WALL_SIZE/2.0, 0.0); // Ajustez la hauteur (1.5) selon vos besoins
+            let camera_offset = Vec3::new(-4.0, WALL_SIZE / 2.0, 0.0); // Ajustez la hauteur (1.5) selon vos besoins
             camera_transform.translation = player_transform.translation + camera_offset;
 
             // Calculez la direction vers laquelle le joueur regarde
@@ -277,12 +335,8 @@ pub fn camera_follow_player(
         }
     }
 }
-use bevy::prelude::*;
 
-pub fn setup_crosshair(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
+pub fn setup_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(NodeBundle {
             style: Style {
