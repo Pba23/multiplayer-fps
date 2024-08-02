@@ -127,7 +127,7 @@ pub fn setup(
     // Setup 3D camera
     commands
         .spawn(Camera3dBundle {
-            transform: Transform::from_xyz(0.0, 2.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+            transform: Transform::from_xyz(0.0, 0.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
             ..default()
         })
         .insert(MainCamera);
@@ -177,10 +177,10 @@ pub fn player_movement(
         direction.z += 1.0;
     }
     if keyboard_input.pressed(KeyCode::Left) {
-        rotation *= Quat::from_rotation_y(0.05);
+        rotation *= Quat::from_rotation_y(0.025);
     }
     if keyboard_input.pressed(KeyCode::Right) {
-        rotation *= Quat::from_rotation_y(-0.05);
+        rotation *= Quat::from_rotation_y(-0.025);
     }
 
     // Gestion des entrées gamepad
@@ -272,4 +272,34 @@ pub fn camera_follow_player(
             camera_transform.look_at(focus_point, Vec3::Y);
         }
     }
+}
+use bevy::prelude::*;
+
+pub fn setup_crosshair(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    commands
+        .spawn(NodeBundle {
+            style: Style {
+                position_type: PositionType::Absolute,
+                position: UiRect {
+                    top: Val::Percent(50.0),
+                    left: Val::Percent(50.0),
+                    ..default()
+                },
+                ..default()
+            },
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn(ImageBundle {
+                style: Style {
+                    size: Size::new(Val::Px(32.0), Val::Px(32.0)),
+                    ..default()
+                },
+                image: UiImage::new(asset_server.load("crosshair.png")),
+                ..default()
+            });
+        });
 }

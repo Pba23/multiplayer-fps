@@ -87,9 +87,9 @@ pub struct Message {
 
 pub mod game;
 
-use bevy::prelude::*;
 use game::interface_in_2d::*;
 use game::interface_in_3d::*;
+use game::laser::*;
 
 fn main() {
     // Capture username and IP address from the terminal
@@ -104,7 +104,7 @@ fn main() {
     let mut mess = Message{action : String::new() , level : None , players : None , curr_player : None};
 
     loop {
-        let (c, addr) = socket.recv_from(&mut buf).unwrap();
+        let (c, _addr) = socket.recv_from(&mut buf).unwrap();
         println!("ADDRESS => {:?}", socket.local_addr());
         let msg  = String::from_utf8_lossy(&buf[..c]).to_string();
         mess = from_str(&msg).expect("ERROR");
@@ -125,6 +125,9 @@ fn main() {
         })
         .add_startup_system(setup)
         .add_startup_system(setup_radar)
+        .add_system(player_shoot)
+        .add_system(update_laser_positions)
+        .add_system(check_laser_collisions)
         .add_system(player_movement)
         .add_system(camera_follow_player)
         .add_system(update_radar)

@@ -16,7 +16,7 @@ pub struct RadarPlayer;
 #[derive(Component)]
 pub struct RadarOtherPlayer;
 
-pub fn setup_radar(mut commands: Commands, _asset_server: Res<AssetServer>, global_data : Res<ServerDetails>) {
+pub fn setup_radar(mut commands: Commands, _asset_server: Res<AssetServer>, _global_data : Res<ServerDetails>) {
     let radar_size = 200.0;
     let cell_size = radar_size / LABYRINTH_WIDTH as f32;
 
