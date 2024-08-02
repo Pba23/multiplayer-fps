@@ -23,7 +23,7 @@ pub const LABYRINTH_WIDTH: usize = 20;
 pub const LABYRINTH_HEIGHT: usize = 20;
 pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     let player_model =
-        asset_server.load("/home/student/multiplayer-fps/client/src/assets/Soldier.glb#Scene0");
+        asset_server.load("/home/student/multiplayer-fps/client/src/assets/Soldir.glb#Scene0");
     commands.insert_resource(PlayerModel(Some(player_model)));
 }
 
@@ -321,7 +321,7 @@ pub fn camera_follow_player(
     if let Ok(player_transform) = player_query.get_single() {
         for mut camera_transform in camera_query.iter_mut() {
             // Positionnez la caméra juste au-dessus de la tête du joueur
-            let camera_offset = Vec3::new(-4.0, WALL_SIZE / 2.0, 0.0); // Ajustez la hauteur (1.5) selon vos besoins
+            let camera_offset = Vec3::new(0.0, WALL_SIZE / 2.0, 0.0); // Ajustez la hauteur (1.5) selon vos besoins
             camera_transform.translation = player_transform.translation + camera_offset;
 
             // Calculez la direction vers laquelle le joueur regarde
