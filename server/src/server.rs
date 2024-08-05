@@ -95,7 +95,7 @@ impl Server {
                         self.timer = Instant::now()
                     } else if self.timer.elapsed() > Duration::from_secs(10) {
                         println!("finish");
-                        self.broadcast(Message::new("start".to_string(), Some(1), Some(self.clients.clone()) , None )).await;
+                        self.broadcast(Message::new("start".to_string(), Some(1), Some(self.clients.clone()) ,  Some(Vec3 { x: 0.0, y: 0.0, z: 0.0 }))).await;
                         break;
                     }
                 }

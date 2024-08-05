@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::math;
 use serde::{Deserialize, Serialize};
 use serde_json::from_str;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
@@ -68,8 +69,11 @@ pub struct  Vec3 {
     z : f32
 }
 impl Vec3 {
+    pub fn to_v3(&self) -> math::Vec3 {
+        math::Vec3::new(self.x , self.y , self.z)
+    }
     pub fn fromV3(x : f32 , y : f32 , z : f32) -> Self {
-        Self { x , y ,z }
+        Self{x , y  , z}
     }
 }
 
@@ -125,7 +129,7 @@ fn main() {
         .send_to(mes, ip_address.clone())
         .expect("failed to connect");
 
-    println!("Waitig for te game to start");
+    println!("Waiting for te game to start");
     let mut buf = [0; 1024];
     let mut mess = Message{action : String::new() , level : None , players : None , curr_player : None , position : None , senderid : None , rotation : None};
 
@@ -133,7 +137,7 @@ fn main() {
     loop {
         let (c, _addr) = socket.recv_from(&mut buf).unwrap();
         println!("ADDRESS => {:?}", socket.local_addr());
-        let msg = String::from_utf8_lossy(&buf[..c]).to_string();
+        let  msg = String::from_utf8_lossy(&buf[..c]).to_string();
         mess = from_str(&msg).expect("ERROR");
         println!("reveived mes : {:?}", mess);
         if mess.action == "start" {
@@ -151,20 +155,7 @@ fn main() {
 
     listen(socket.try_clone().unwrap() , channel);   
 
-    // Start a thread to listen for messages from the server
-    let socket_clone = socket.try_clone().expect("Failed to clone socket");
-    thread::spawn(move || loop {
-        let mut buf = [0; 1024];
-        if let Ok((amt, _)) = socket_clone.recv_from(&mut buf) {
-            // println!("QQQQQ {:?}", String::from_utf8_lossy(&buf[..amt]));
-            // let msg = String::from_utf8_lossy(&buf[..len]);
 
-            if let Ok(message) = bincode::deserialize::<Message>(&buf[..amt]) {
-                print!("BASTIENT A TORD{:?}", message)
-            }
-        }
-        thread::sleep(Duration::from_millis(10));
-    });
 
     App::new()
         .add_plugins(DefaultPlugins)
@@ -175,10 +166,10 @@ fn main() {
             mess,
         })
         .insert_resource(channel_clone)
-        .add_system(update_ressources)
         .add_startup_system(setup)
         .add_startup_system(setup_radar)
         .add_system(player_shoot)
+        .add_system(update_ressources)
         .add_system(update_laser_positions)
         .add_system(check_laser_collisions)
         .add_system(player_movement)

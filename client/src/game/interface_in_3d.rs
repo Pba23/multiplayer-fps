@@ -9,7 +9,7 @@ pub const WALL_SIZE: f32 = 7.0; // Taille du mur
 
 #[derive(Component)]
 pub struct OtherPlayer {
-    id : u32,
+    pub id: u32,
 }
 
 #[derive(Component)]
@@ -106,7 +106,7 @@ pub fn setup(
                     0.5,
                     -(start_y as f32) * WALL_SIZE,
                 ), // Augmentez y pour élever le modèle
-                scale: Vec3::splat(0.05), // Ajustez l'échelle si nécessaire
+                scale: Vec3::splat(0.1), // Ajustez l'échelle si nécessaire
                 ..Default::default()
             },
             ..Default::default()
@@ -115,7 +115,7 @@ pub fn setup(
         if pl.id == global_data.mess.clone().curr_player.unwrap().id {
             entity.insert(Player);
         } else {
-            entity.insert(OtherPlayer{id : pl.id});
+            entity.insert(OtherPlayer { id: pl.id });
         }
         // } else {
         //     // Fallback to a cube if the model isn't loaded yet
@@ -225,10 +225,10 @@ pub fn player_movement(
     // Gestion des entrées clavier
     if keyboard_input.pressed(KeyCode::Up) {
         println!("keyup");
-        direction.z -= 1.0;
+        direction.z += 1.0;
     }
     if keyboard_input.pressed(KeyCode::Down) {
-        direction.z += 1.0;
+        direction.z -= 1.0;
     }
     if keyboard_input.pressed(KeyCode::Left) {
         rotation *= Quat::from_rotation_y(0.025);
@@ -251,10 +251,10 @@ pub fn player_movement(
 
     // Mouvement avec le stick analogique gauche
     if let Some(x_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::LeftStickX)) {
-        direction.x += x_axis;
+        direction.x -= x_axis;
     }
     if let Some(y_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::LeftStickY)) {
-        direction.z -= y_axis;
+        direction.z += y_axis;
     }
 
     // Rotation avec le stick analogique droit
@@ -274,27 +274,36 @@ pub fn player_movement(
     // Vérifier les collisions
     let wall_query = param_set.p1();
     if !will_collide_with_wall(new_position, &wall_query) {
-       // println!("the new position {:?}" , new_position);
-       let mut binding = param_set.p0();
-       let mut player_transform = binding.single_mut();
+        // println!("the new position {:?}" , new_position);
+        let mut binding = param_set.p0();
+        let mut player_transform = binding.single_mut();
 
-       if new_position != player_transform.translation || rotation != player_transform.rotation {
+        if new_position != player_transform.translation || rotation != player_transform.rotation {
+            // send new position to the server
+            let mut mes = Message {
+                action: String::from("move"),
+                level: None,
+                players: None,
+                curr_player: None,
+                position: Some(crate::Vec3::fromV3(
+                    current_position.x,
+                    current_position.y,
+                    current_position.z,
+                )),
+                senderid: Some(global_data.mess.curr_player.clone().unwrap().id),
+                rotation: Some(rotation),
+            };
+            let json_data = serde_json::to_string(&mes).unwrap();
 
-           // send new position to the server
-           let mut mes = Message{action : String::from("move") , level : None , players : None , curr_player : None, position: Some(crate::Vec3::fromV3(current_position.x, current_position.y, current_position.z)) , senderid : Some(global_data.mess.curr_player.clone().unwrap().id) , rotation : Some(rotation) };
-           let json_data = serde_json::to_string(&mes).unwrap();
-   
-           global_data.socket.send_to(json_data.as_bytes(), global_data.ip_address.clone());
-       }
+            global_data
+                .socket
+                .send_to(json_data.as_bytes(), global_data.ip_address.clone());
+        }
 
+        // Deuxième passe : appliquer les changements
 
-
-       // Deuxième passe : appliquer les changements
-       
-       player_transform.translation = new_position;
-       player_transform.rotation = rotation;
-       
-    
+        player_transform.translation = new_position;
+        player_transform.rotation = rotation;
     }
 }
 pub fn will_collide_with_wall(
@@ -322,7 +331,8 @@ pub fn camera_follow_player(
     mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,
 ) {
     if let Ok(player_transform) = player_query.get_single() {
-        for mut camera_transform in camera_query.iter_mut() {
+        // for mut camera_transform in camera_query.iter_mut() {
+        if let Ok(mut camera_transform) = camera_query.get_single_mut() {
             // Positionnez la caméra juste au-dessus de la tête du joueur
             let camera_offset = Vec3::new(0.0, WALL_SIZE / 2.0, 0.0); // Ajustez la hauteur (1.5) selon vos besoins
             camera_transform.translation = player_transform.translation + camera_offset;
@@ -331,13 +341,46 @@ pub fn camera_follow_player(
             let forward = player_transform.forward();
 
             // Positionnez un point de focus légèrement devant le joueur
-            let focus_point = player_transform.translation + forward * 10.0; // Le '2.0' détermine la distance du point de focus
+            let focus_point = player_transform.translation - forward * 10.0; // Le '2.0' détermine la distance du point de focus
 
             // Faites regarder la caméra vers ce point de focus
             camera_transform.look_at(focus_point, Vec3::Y);
         }
     }
 }
+// pub fn camera_follow_player(
+//     player_query: Query<&Transform, With<Player>>,
+//     mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,
+// ) {
+//     if let Ok(player_transform) = player_query.get_single() {
+//         for mut camera_transform in camera_query.iter_mut() {
+//             // Define the radius of the circular path and height offset
+            // let radius: f32 = 5.0;
+            // let height_offset: f32 = WALL_SIZE / 2.0;
+
+            // // Calculate the angle based on the player's rotation
+            // let yaw = player_transform.rotation.to_euler(EulerRot::YXZ).0;
+
+            // // Calculate the new camera position in a circle around the player
+            // let x = player_transform.translation.x + radius * yaw.cos();
+            // let z = player_transform.translation.z + radius * yaw.sin();
+            // let y = player_transform.translation.y + height_offset;
+
+            // // Update the camera's position
+            // camera_transform.translation = Vec3::new(x, y, z);
+
+            // // Calculate the forward direction based on the player's rotation
+            // let forward = player_transform.forward();
+
+            // // Calculate the focus point slightly in front of the player
+            // let focus_distance = 10.0;
+            // let focus_point = player_transform.translation + forward * focus_distance;
+
+            // // Make the camera look at the focus point through the player
+            // camera_transform.look_at(focus_point, Vec3::Y);
+//         }
+//     }
+// }
 
 pub fn setup_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
@@ -365,27 +408,20 @@ pub fn setup_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
-pub fn update_position(mut player_query: Query<(&mut Transform, &OtherPlayer), With<OtherPlayer>>  , global_data : Res<ServerDetails>) {
-    if let Some(players) = &global_data.mess.players  {
-
-        for (mut tr, player)  in player_query.iter_mut()  {
-   
-
+pub fn update_position(
+    mut player_query: Query<(&mut Transform, &OtherPlayer), With<OtherPlayer>>,
+    global_data: Res<ServerDetails>,
+) {
+    if let Some(players) = &global_data.mess.players {
+        for (mut tr, player) in player_query.iter_mut() {
             for global_player in players {
                 if global_player.id == player.id {
                     if let Some(new_position) = &global_player.position {
-                        tr.translation = Vec3::new(new_position.x, new_position.y, new_position.z);    //new_position;
+                        tr.translation = Vec3::new(new_position.x, new_position.y, new_position.z); //new_position;
                         tr.rotation = global_player.rotation.unwrap();
                     }
                 }
             }
-        
-        
         }
-
-
     }
-    
-
-
-} 
+}

@@ -1,15 +1,26 @@
 pub use bevy::prelude::*;
-use crate::game::interface_in_3d::*;
+use serde::{Deserialize, Serialize};
+use crate::{game::interface_in_3d::*, Message, ServerDetails};
 
 #[derive(Component)]
 pub struct Laser {
-    lifetime: Timer,
+    pub lifetime: Timer,
 }
 #[derive(Component)]
 struct PlayerInfo {
-    id: u32,
+    pub id: u32,
     // Ajoutez d'autres champs nécessaires ici
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct  ShootMessage {
+    pub action : String,
+    pub origin : Vec3,
+    pub direction : Vec3,
+    pub senderid : u32
+}
+
+
 pub fn player_shoot(
     mut commands: Commands,
     mouse_button_input: Res<Input<MouseButton>>,
@@ -18,11 +29,16 @@ pub fn player_shoot(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
+    buttons: Res<Input<GamepadButton>>,
+    globaldata : Res<ServerDetails>
+
 ) {
     let player_transform= player_query.single();
+
+    let gamepad = Gamepad::new(0);
     
     if mouse_button_input.just_pressed(MouseButton::Left) || 
-       gamepad_button.just_pressed(GamepadButton::new(Gamepad { id: 0 }, GamepadButtonType::RightTrigger2)) {
+        buttons.just_pressed(GamepadButton::new(gamepad, GamepadButtonType::RightTrigger)) {
         let ray_direction = player_transform.forward();
         
         // Créer le laser
@@ -42,7 +58,11 @@ pub fn player_shoot(
                 lifetime: Timer::from_seconds(0.5,TimerMode::Once), // Le laser dure 0.5 secondes
             },
         ));
+        let  mes = ShootMessage{action : String::from("shoot") , origin : player_transform.translation  , senderid : globaldata.mess.curr_player.clone().unwrap().id , direction : -ray_direction};
+        let json_data = serde_json::to_string(&mes).unwrap();
+        globaldata.socket.send_to(json_data.as_bytes(), globaldata.ip_address.clone()).expect("failed to send shoot");
     }
+
 }
 pub fn update_laser_positions(
     time: Res<Time>,

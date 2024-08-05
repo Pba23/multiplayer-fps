@@ -1,9 +1,9 @@
 use std::{borrow::BorrowMut, net::UdpSocket, thread, time::Duration};
 
-use bevy::prelude::{Res, ResMut};
+use bevy::{asset::Assets, math::Vec3, pbr::{PbrBundle, StandardMaterial}, prelude::{shape, Color, Commands, Component, Entity, Mesh, Query, Res, ResMut, Transform, With}, time::{Timer, TimerMode}, transform, utils::default};
 use serde_json::from_str;
 
-use crate::{Message, MyChannel, RadarOtherPlayer, ServerDetails};
+use crate::{Laser, Message, MyChannel, OtherPlayer, Player, RadarOtherPlayer, ServerDetails, ShootMessage};
 
 pub  fn listen(socket : UdpSocket , channel  :  MyChannel) {
     // Start a thread to listen for messages from the server
@@ -16,9 +16,7 @@ pub  fn listen(socket : UdpSocket , channel  :  MyChannel) {
                     let msg = String::from_utf8_lossy(&buf[..amt]);
                     if let Err(e) = channel.tx.send(msg.to_string()) {
                         eprintln!("Failed to send message to channel: {}", e);
-                    } else {
-                        println!("socket it {}" , msg.to_string())
-                    }
+                    } 
                 }
                 Err(e) => {
                     eprintln!("Failed to receive from socket: {}", e);
@@ -27,7 +25,10 @@ pub  fn listen(socket : UdpSocket , channel  :  MyChannel) {
         }
     });
 }
-pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<ServerDetails>) {
+pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<ServerDetails>, 
+    mut commands: Commands, 
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,) {
 
     let mut rx = channel.rx.lock().unwrap();
     while let Ok(m) = rx.try_recv() {
@@ -35,7 +36,7 @@ pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<Ser
             if mess.action == "move" {
                 let sender_id = mess.senderid.unwrap();
                 let new_position = mess.position.unwrap();
-                let rotation = mess.rotation.unwrap();
+                let rotation = mess.rotation.unwrap(); 
                 if let Some(players) = &mut globaldata.mess.players {
                     for player in players.iter_mut() {
                         if player.id == sender_id {
@@ -45,8 +46,41 @@ pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<Ser
                             break;
                         }
                     }
+                }//vous faites quoiiiiiiiiiii ???
+            }else if mess.action == "shoot" {
+                println!("the player {:?} shoot",  mess.senderid);
+                let mess : ShootMessage = from_str(&m).expect("ERROR");
+                let  mut player  = None;
+                for pl in globaldata.mess.players.clone().unwrap() {
+                    if pl.id == mess.senderid {
+                        player = Some(pl)
+                    }
                 }
-            }            
+                let player = player.unwrap();
+                if player.position.is_some() {
+                    println!("in some pl {:?}" , player.position);
+                    // Créer le laser
+                    commands.spawn((
+                        PbrBundle {
+                            mesh: meshes.add(Mesh::from(shape::Box::new(0.05, 0.05, 80.0))),
+                            material: materials.add(StandardMaterial {
+                                base_color: Color::rgb(1.0, 0.0, 0.0), // Couleur rouge pour le laser
+                                emissive: Color::rgb(1.0, 0.0, 0.0),   // Faire briller le laser
+                                ..default()
+                            }),
+                            transform: Transform::from_translation(mess.origin)
+                                .looking_to(mess.direction, Vec3::Y),
+                            ..default()
+                        },
+                        Laser {
+                            lifetime: Timer::from_seconds(2.0,TimerMode::Once), // Le laser dure 0.5 secondes
+                        },
+                    ));
+                }
+            }    
         
     };
+}
+fn foward(v : Vec3) -> Vec3 {
+    -(v * Vec3::Z)
 }
