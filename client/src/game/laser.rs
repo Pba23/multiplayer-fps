@@ -50,10 +50,10 @@ pub fn player_shoot(
                     emissive: Color::rgb(1.0, 0.0, 0.0),   // Faire briller le laser
                     ..default()
                 }),
-                transform: Transform::from_translation(player_transform.translation)
+                transform: Transform::from_translation(player_transform.translation+ Vec3::new(0.0, 2.0, 0.0))
                     .looking_to(ray_direction, Vec3::Y),
                 ..default()
-            },
+            }, 
             Laser {
                 lifetime: Timer::from_seconds(0.5,TimerMode::Once), // Le laser dure 0.5 secondes
             },

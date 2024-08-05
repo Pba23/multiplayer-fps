@@ -4,6 +4,7 @@ use crate::{game::maze::*, Message, ServerDetails};
 pub use bevy::gltf::Gltf;
 pub use bevy::gltf::GltfMesh;
 use bevy::input::gamepad::{GamepadButtonChangedEvent, GamepadEvent};
+use bevy::input::mouse::MouseMotion;
 pub use bevy::prelude::*;
 pub const WALL_SIZE: f32 = 7.0; // Taille du mur
 
@@ -204,62 +205,39 @@ pub fn player_movement(
         Query<&mut Transform, With<Player>>,
         Query<&Transform, With<Wall>>,
     )>,
-    _gamepad_evr: EventReader<GamepadEvent>,
-    axes: Res<Axis<GamepadAxis>>,
-    buttons: Res<Input<GamepadButton>>,
-    mut button_evr: EventReader<GamepadButtonChangedEvent>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
     global_data: Res<ServerDetails>,
 ) {
     let mut direction = Vec3::ZERO;
-    let mut rotation: Quat;
+    let mut rotation_delta = 0.0;
     let current_position: Vec3;
+    let mut current_rotation: Quat;
 
     // Première passe : lire la position et la rotation du joueur
     {
         let binding = param_set.p0();
         let player_transform = binding.single();
         current_position = player_transform.translation;
-        rotation = player_transform.rotation;
+        current_rotation = player_transform.rotation;
     }
 
-    // Gestion des entrées clavier
+    // Gestion des entrées clavier pour les déplacements latéraux
+    if keyboard_input.pressed(KeyCode::Left) {
+        direction.x -= 1.0;
+    }
+    if keyboard_input.pressed(KeyCode::Right) {
+        direction.x += 1.0;
+    }
     if keyboard_input.pressed(KeyCode::Up) {
-        println!("keyup");
         direction.z += 1.0;
     }
     if keyboard_input.pressed(KeyCode::Down) {
         direction.z -= 1.0;
     }
-    if keyboard_input.pressed(KeyCode::Left) {
-        rotation *= Quat::from_rotation_y(0.025);
-    }
-    if keyboard_input.pressed(KeyCode::Right) {
-        rotation *= Quat::from_rotation_y(-0.025);
-    }
 
-    // Gestion des entrées gamepad
-    let gamepad = Gamepad::new(0);
-
-    if buttons.just_pressed(GamepadButton::new(gamepad, GamepadButtonType::RightTrigger)) {
-        println!("SHOOT");
-    }
-    for button_event in button_evr.iter() {
-        if button_event.value == 1.0 {
-            println!("Button pressed: {:?}", button_event.button_type);
-        }
-    }
-
-    // Mouvement avec le stick analogique gauche
-    if let Some(x_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::LeftStickX)) {
-        direction.x -= x_axis;
-    }
-    if let Some(y_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::LeftStickY)) {
-        direction.z += y_axis;
-    }
-
-    // Rotation avec le stick analogique droit
-    if let Some(x_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::RightStickX)) {
-        rotation *= Quat::from_rotation_y(-x_axis * 0.05);
+    // Gestion de la rotation avec la souris
+    for event in mouse_motion_events.iter() {
+        rotation_delta -= event.delta.x * 0.005; // Ajustez la sensibilité ici
     }
 
     // Normaliser la direction pour un mouvement cohérent en diagonale
@@ -268,42 +246,42 @@ pub fn player_movement(
     }
 
     let speed = WALL_SIZE; // Vitesse de déplacement en unités par seconde
-    let movement = rotation * (direction * speed * time.delta_seconds());
+    let movement = current_rotation * (direction * speed * time.delta_seconds());
     let new_position = current_position + movement;
+
+    // Appliquer la rotation
+    let new_rotation = current_rotation * Quat::from_rotation_y(rotation_delta);
 
     // Vérifier les collisions
     let wall_query = param_set.p1();
     if !will_collide_with_wall(new_position, &wall_query) {
-        // println!("the new position {:?}" , new_position);
         let mut binding = param_set.p0();
         let mut player_transform = binding.single_mut();
 
-        if new_position != player_transform.translation || rotation != player_transform.rotation {
-            // send new position to the server
-            let mut mes = Message {
+        if new_position != player_transform.translation || new_rotation != player_transform.rotation {
+            // Envoyer la nouvelle position au serveur
+            let mes = Message {
                 action: String::from("move"),
                 level: None,
                 players: None,
                 curr_player: None,
                 position: Some(crate::Vec3::fromV3(
-                    current_position.x,
-                    current_position.y,
-                    current_position.z,
+                    new_position.x,
+                    new_position.y,
+                    new_position.z,
                 )),
                 senderid: Some(global_data.mess.curr_player.clone().unwrap().id),
-                rotation: Some(rotation),
+                rotation: Some(new_rotation),
             };
             let json_data = serde_json::to_string(&mes).unwrap();
-
             global_data
                 .socket
                 .send_to(json_data.as_bytes(), global_data.ip_address.clone());
         }
 
         // Deuxième passe : appliquer les changements
-
         player_transform.translation = new_position;
-        player_transform.rotation = rotation;
+        player_transform.rotation = new_rotation;
     }
 }
 pub fn will_collide_with_wall(
