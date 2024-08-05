@@ -1,4 +1,4 @@
-use bevy::asset::LoadState;
+// use bevy::asset::LoadState;
 // use crate::maze;
 use crate::{game::maze::*, Message, ServerDetails};
 pub use bevy::gltf::Gltf;
@@ -8,7 +8,9 @@ pub use bevy::prelude::*;
 pub const WALL_SIZE: f32 = 7.0; // Taille du mur
 
 #[derive(Component)]
-pub struct OtherPlayer;
+pub struct OtherPlayer {
+    id : u32,
+}
 
 #[derive(Component)]
 
@@ -21,39 +23,39 @@ pub struct Wall;
 pub struct MainCamera;
 pub const LABYRINTH_WIDTH: usize = 20;
 pub const LABYRINTH_HEIGHT: usize = 20;
-pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let player_model =
-        asset_server.load("/home/student/multiplayer-fps/client/src/assets/Soldir.glb#Scene0");
-    commands.insert_resource(PlayerModel(Some(player_model)));
-}
+// pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+//     let player_model = asset_server.load("assets/Soldier.glb");
+//     commands.insert_resource(PlayerModel(Some(player_model)));
+// }
 
-#[derive(Resource,Default)]
-pub struct PlayerModel(Option<Handle<Scene>>);
-pub fn check_model_loaded(player_model: Res<PlayerModel>, asset_server: Res<AssetServer>) {
-    if let Some(handle) = &player_model.0 {
-        match asset_server.get_load_state(handle) {
-            LoadState::Loading => println!("Le modèle est en cours de chargement..."),
-            LoadState::Loaded => println!("Le modèle est chargé avec succès!"),
-            LoadState::Failed => println!("Échec du chargement du modèle!"),
-            LoadState::Unloaded => println!("Le modèle n'est pas chargé."),
-            _ => println!("autreeeee"),
-        }
-    } else {
-        println!("Aucun modèle n'est assigné.");
-    }
-}
-pub fn debug_scene_entities(query: Query<Entity, With<Handle<Scene>>>) {
-    for entity in query.iter() {
-        println!("Entité avec SceneBundle trouvée: {:?}", entity);
-    }
-}
+// #[derive(Resource, Default)]
+// pub struct PlayerModel(Option<Handle<Scene>>);
+// pub fn check_model_loaded(player_model: Res<PlayerModel>, asset_server: Res<AssetServer>) {
+//     if let Some(handle) = &player_model.0 {
+//         match asset_server.get_load_state(handle) {
+//             LoadState::Loading => println!("Le modèle est en cours de chargement..."),
+//             LoadState::Loaded => println!("Le modèle est chargé avec succès!"),
+//             LoadState::Failed => println!("Échec du chargement du modèle!"),
+//             LoadState::Unloaded => println!("Le modèle n'est pas chargé."),
+//             _ => println!("autreeeee"),
+//         }
+//     } else {
+//         println!("Aucun modèle n'est assigné.");
+//     }
+// }
+// pub fn debug_scene_entities(query: Query<Entity, With<Handle<Scene>>>) {
+//     for entity in query.iter() {
+//         println!("Entité avec SceneBundle trouvée: {:?}", entity);
+//     }
+// }
 
 pub fn setup(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
     global_data: Res<ServerDetails>,
-    player_model: Res<PlayerModel>,
+    // player_model: Res<PlayerModel>,
+    asset_server: Res<AssetServer>,
 ) {
     println!("GLOBAL VARIABLES {:?}", global_data);
     // Define colors for player, wall, and floor
@@ -95,48 +97,48 @@ pub fn setup(
     // Setup player entity at the chosen starting position
     for pl in &global_data.mess.players.clone().unwrap() {
         let (start_x, start_y) = starting_positions[pl.id as usize - 1];
-        
-        if let Some(model) = &player_model.0 {
-            println!("Tentative d'utilisation du modèle GLB pour le joueur");
-            let mut entity = commands.spawn(SceneBundle {
-                scene: model.clone(),
-                transform: Transform {
-                    translation: Vec3::new(start_x as f32 * WALL_SIZE, 1.0, -(start_y as f32) * WALL_SIZE), // Augmentez y pour élever le modèle
-                    scale: Vec3::splat(1.0), // Ajustez l'échelle si nécessaire
-                    ..Default::default()
-                },
+        // if let Some(model) = &player_model.0 {
+        let mut entity = commands.spawn(SceneBundle {
+            scene: asset_server.load("Soldier.glb#Scene0"),
+            transform: Transform {
+                translation: Vec3::new(
+                    start_x as f32 * WALL_SIZE,
+                    0.5,
+                    -(start_y as f32) * WALL_SIZE,
+                ), // Augmentez y pour élever le modèle
+                scale: Vec3::splat(0.05), // Ajustez l'échelle si nécessaire
                 ..Default::default()
-            });
+            },
+            ..Default::default()
+        });
 
-            if pl.id == global_data.mess.clone().curr_player.unwrap().id {
-                entity.insert(Player);
-                println!("Joueur principal créé avec modèle GLB");
-            } else {
-                entity.insert(OtherPlayer);
-                println!("Autre joueur créé avec modèle GLB");
-            }
+        if pl.id == global_data.mess.clone().curr_player.unwrap().id {
+            entity.insert(Player);
         } else {
-            // Fallback to a cube if the model isn't loaded yet
-            let mut entity = commands.spawn(PbrBundle {
-                mesh: meshes.add(Mesh::from(shape::Cube { size: 2.0 })),
-                material: materials.add(Color::rgb(0.0, 1.0, 0.0).into()),
-                transform: Transform {
-                    translation: Vec3::new(
-                        start_x as f32 * WALL_SIZE,
-                        0.5,
-                        -(start_y as f32) * WALL_SIZE,
-                    ),
-                    ..Default::default()
-                },
-                ..Default::default()
-            });
-
-            if pl.id == global_data.mess.clone().curr_player.unwrap().id {
-                entity.insert(Player);
-            } else {
-                entity.insert(OtherPlayer);
-            }
+            entity.insert(OtherPlayer{id : pl.id});
         }
+        // } else {
+        //     // Fallback to a cube if the model isn't loaded yet
+        //     let mut entity = commands.spawn(PbrBundle {
+        //         mesh: meshes.add(Mesh::from(shape::Cube { size: 2.0 })),
+        //         material: materials.add(Color::rgb(0.0, 1.0, 0.0).into()),
+        //         transform: Transform {
+        //             translation: Vec3::new(
+        //                 start_x as f32 * WALL_SIZE,
+        //                 0.5,
+        //                 -(start_y as f32) * WALL_SIZE,
+        //             ),
+        //             ..Default::default()
+        //         },
+        //         ..Default::default()
+        //     });
+
+        //     if pl.id == global_data.mess.clone().curr_player.unwrap().id {
+        //         entity.insert(Player);
+        //     } else {
+        //         entity.insert(OtherPlayer);
+        //     }
+        // }
     }
 
     // Create entities for the labyrinth
@@ -272,26 +274,27 @@ pub fn player_movement(
     // Vérifier les collisions
     let wall_query = param_set.p1();
     if !will_collide_with_wall(new_position, &wall_query) {
-        // println!("the new position {:?}" , new_position);
-        // Deuxième passe : appliquer les changements
-        let mut binding = param_set.p0();
-        let mut player_transform = binding.single_mut();
-        player_transform.translation = new_position;
-        player_transform.rotation = rotation;
+       // println!("the new position {:?}" , new_position);
+       let mut binding = param_set.p0();
+       let mut player_transform = binding.single_mut();
 
-        // send new position to the server
-        let mes = Message {
-            action: String::from("move"),
-            level: None,
-            players: None,
-            curr_player: None,
-            position: Some(new_position),
-        };
-        let json_data = serde_json::to_string(&mes).unwrap();
+       if new_position != player_transform.translation || rotation != player_transform.rotation {
 
-        let _ = global_data
-            .socket
-            .send_to(json_data.as_bytes(), global_data.ip_address.clone());
+           // send new position to the server
+           let mut mes = Message{action : String::from("move") , level : None , players : None , curr_player : None, position: Some(crate::Vec3::fromV3(current_position.x, current_position.y, current_position.z)) , senderid : Some(global_data.mess.curr_player.clone().unwrap().id) , rotation : Some(rotation) };
+           let json_data = serde_json::to_string(&mes).unwrap();
+   
+           global_data.socket.send_to(json_data.as_bytes(), global_data.ip_address.clone());
+       }
+
+
+
+       // Deuxième passe : appliquer les changements
+       
+       player_transform.translation = new_position;
+       player_transform.rotation = rotation;
+       
+    
     }
 }
 pub fn will_collide_with_wall(
@@ -361,3 +364,28 @@ pub fn setup_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
             });
         });
 }
+
+pub fn update_position(mut player_query: Query<(&mut Transform, &OtherPlayer), With<OtherPlayer>>  , global_data : Res<ServerDetails>) {
+    if let Some(players) = &global_data.mess.players  {
+
+        for (mut tr, player)  in player_query.iter_mut()  {
+   
+
+            for global_player in players {
+                if global_player.id == player.id {
+                    if let Some(new_position) = &global_player.position {
+                        tr.translation = Vec3::new(new_position.x, new_position.y, new_position.z);    //new_position;
+                        tr.rotation = global_player.rotation.unwrap();
+                    }
+                }
+            }
+        
+        
+        }
+
+
+    }
+    
+
+
+} 

@@ -1,20 +1,24 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::from_str;
+use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use std::{
-    io::{self, Write},
-    net::{SocketAddr, UdpSocket},
-    thread,
-    time::Duration,
+    io::{self, Write}, net::{SocketAddr, UdpSocket}, sync::{Arc, Mutex}, thread, time::Duration
 };
+pub mod game;
+
+use game::{connexion::{listen, update_ressources}, interface_in_2d::*};
+use game::interface_in_3d::*;
+use game::laser::*;
 
 // Structs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
     pub id: u32,
-    pub position: (u32, u32),
+    pub position: Option<Vec3>,
     pub addr: SocketAddr,
-    pub username: String,
+    pub username : String,
+    rotation : Option<Quat>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,12 +52,32 @@ enum LocalGameState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Message {
-    action: String,
-    level: Option<u32>,
-    players: Option<Vec<Player>>,
-    curr_player: Option<Player>,
-    position: Option<Vec3>,
+pub struct  Message {
+    action : String,
+    level : Option<u32>,
+    players : Option<Vec<Player>>,
+    curr_player : Option<Player>,
+    position : Option<Vec3>,
+    senderid : Option<u32>,
+    rotation : Option<Quat>
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct  Vec3 {
+    x : f32 , 
+    y : f32,
+    z : f32
+}
+impl Vec3 {
+    pub fn fromV3(x : f32 , y : f32 , z : f32) -> Self {
+        Self { x , y ,z }
+    }
+}
+
+#[derive(Resource , Debug  )]
+
+pub struct MyChannel {
+   pub tx: UnboundedSender<String>,
+   pub rx: Arc<Mutex<UnboundedReceiver<String>>>,
 }
 
 // Entry point
@@ -88,11 +112,7 @@ pub struct Message {
 // Ok(())
 // }
 
-pub mod game;
 
-use game::interface_in_2d::*;
-use game::interface_in_3d::*;
-use game::laser::*;
 
 fn main() {
     // Capture username and IP address from the terminal
@@ -107,7 +127,8 @@ fn main() {
 
     println!("Waitig for te game to start");
     let mut buf = [0; 1024];
-    let mut mess: Message;
+    let mut mess = Message{action : String::new() , level : None , players : None , curr_player : None , position : None , senderid : None , rotation : None};
+
 
     loop {
         let (c, _addr) = socket.recv_from(&mut buf).unwrap();
@@ -121,6 +142,14 @@ fn main() {
             break;
         }
     }
+    let (tx, rx) = unbounded_channel();
+    let  channel = MyChannel{tx : tx.clone()  , rx : Arc::new(Mutex::new(rx))};
+    let channel_clone = MyChannel { 
+        tx: channel.tx.clone(), 
+        rx: Arc::clone(&channel.rx) 
+    };
+
+    listen(socket.try_clone().unwrap() , channel);   
 
     // Start a thread to listen for messages from the server
     let socket_clone = socket.try_clone().expect("Failed to clone socket");
@@ -145,18 +174,17 @@ fn main() {
             socket,
             mess,
         })
-        .insert_resource(PlayerModel::default())
-        .add_startup_system(load_assets)
-        .add_startup_system(setup.after(load_assets))
+        .insert_resource(channel_clone)
+        .add_system(update_ressources)
+        .add_startup_system(setup)
         .add_startup_system(setup_radar)
         .add_system(player_shoot)
         .add_system(update_laser_positions)
         .add_system(check_laser_collisions)
         .add_system(player_movement)
+        .add_system(update_position)
         .add_system(camera_follow_player)
         .add_system(update_radar)
-        .add_system(check_model_loaded)
-        .add_system(debug_scene_entities)
         .run();
 }
 

@@ -8,7 +8,7 @@ use tokio::net::UdpSocket;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
     pub id: u32,
-    pub position: (u32 , u32),
+    pub position: Option<Vec3>,
     pub addr: SocketAddr,
     pub username : String
 }
@@ -37,7 +37,9 @@ pub struct Message {
     action : String,
     level : Option<u32>,
     players : Option<Vec<Player>>,
-    position : Option<Vec3>
+    curr_player : Option<Player>,
+    position : Option<Vec3>,
+    senderid : Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,8 +49,8 @@ pub struct  Vec3 {
     z : f32
 }
 impl Message {
-    fn new(action : String , level : Option<u32> , players : Option<Vec<Player>> ) -> Self {
-        Self { action, level,  players   , position : None}
+    fn new(action : String , level : Option<u32> , players : Option<Vec<Player>> , position : Option<Vec3> ) -> Self {
+        Self { action, level,  players , position , curr_player : None , senderid : None }
     }
 }
 
@@ -78,7 +80,7 @@ impl Server {
     
                     let new_player = Player {
                         id: self.clients.len() as u32 + 1, 
-                        position: (0, 0),
+                        position: None,
                         addr,
                         username : msg.to_string()
                     };
@@ -93,7 +95,7 @@ impl Server {
                         self.timer = Instant::now()
                     } else if self.timer.elapsed() > Duration::from_secs(10) {
                         println!("finish");
-                        self.broadcast(Message::new("start".to_string(), Some(1), Some(self.clients.clone()))).await;
+                        self.broadcast(Message::new("start".to_string(), Some(1), Some(self.clients.clone()) , None )).await;
                         break;
                     }
                 }
@@ -111,11 +113,11 @@ impl Server {
             if let Some(pl) = cl.first() {
                 let msg = String::from_utf8_lossy(&buf[..c]);
                 
-                let mut mess = Message::new(String::new(), None, None);
-                mess = from_str(&msg).expect("ERROR");
-                println!("receive message from {:?}  {:?}", pl.username ,  mess);
+                // let mut mess = Message::new(String::new(), None, None  , None);
+                // mess = from_str(&msg).expect("ERROR");
+                // println!("receive message from {:?} " ,  msg.to_string());
                 
-                self.broadcast(Message::new("move".to_string(), None, None)).await;
+                self.broadcast_str(msg.to_string()).await;
             }
  
         }
@@ -155,6 +157,15 @@ impl Server {
                     .expect("Failed to send data");
         }
     }
+    async fn broadcast_str(&self , mes : String) {
+        // Broadcast the message to all clients
+        for client in self.clients.iter() {
+               self.socket
+                   .send_to(mes.as_bytes(), &client.addr)
+                   .await
+                   .expect("Failed to send data");
+       }
+   }
 }
 
 // impl Client {
