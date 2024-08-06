@@ -100,11 +100,11 @@ pub fn setup(
         let (start_x, start_y) = starting_positions[pl.id as usize - 1];
         // if let Some(model) = &player_model.0 {
         let mut entity = commands.spawn(SceneBundle {
-            scene: asset_server.load("Soldier.glb#Scene0"),
+            scene: asset_server.load("new_main2.glb#Scene0"),
             transform: Transform {
                 translation: Vec3::new(
                     start_x as f32 * WALL_SIZE,
-                    0.5,
+                    3.5,
                     -(start_y as f32) * WALL_SIZE,
                 ), // Augmentez y pour élever le modèle
                 scale: Vec3::splat(0.1), // Ajustez l'échelle si nécessaire
@@ -205,39 +205,62 @@ pub fn player_movement(
         Query<&mut Transform, With<Player>>,
         Query<&Transform, With<Wall>>,
     )>,
-    mut mouse_motion_events: EventReader<MouseMotion>,
+    _gamepad_evr: EventReader<GamepadEvent>,
+    axes: Res<Axis<GamepadAxis>>,
+    buttons: Res<Input<GamepadButton>>,
+    mut button_evr: EventReader<GamepadButtonChangedEvent>,
     global_data: Res<ServerDetails>,
 ) {
     let mut direction = Vec3::ZERO;
-    let mut rotation_delta = 0.0;
+    let mut rotation: Quat;
     let current_position: Vec3;
-    let mut current_rotation: Quat;
 
     // Première passe : lire la position et la rotation du joueur
     {
         let binding = param_set.p0();
         let player_transform = binding.single();
         current_position = player_transform.translation;
-        current_rotation = player_transform.rotation;
+        rotation = player_transform.rotation;
     }
 
-    // Gestion des entrées clavier pour les déplacements latéraux
-    if keyboard_input.pressed(KeyCode::Left) {
-        direction.x -= 1.0;
-    }
-    if keyboard_input.pressed(KeyCode::Right) {
-        direction.x += 1.0;
-    }
+    // Gestion des entrées clavier
     if keyboard_input.pressed(KeyCode::Up) {
-        direction.z += 1.0;
-    }
-    if keyboard_input.pressed(KeyCode::Down) {
+        println!("keyup");
         direction.z -= 1.0;
     }
+    if keyboard_input.pressed(KeyCode::Down) {
+        direction.z += 1.0;
+    }
+    if keyboard_input.pressed(KeyCode::Left) {
+        rotation *= Quat::from_rotation_y(0.025);
+    }
+    if keyboard_input.pressed(KeyCode::Right) {
+        rotation *= Quat::from_rotation_y(-0.025);
+    }
 
-    // Gestion de la rotation avec la souris
-    for event in mouse_motion_events.iter() {
-        rotation_delta -= event.delta.x * 0.005; // Ajustez la sensibilité ici
+    // Gestion des entrées gamepad
+    let gamepad = Gamepad::new(0);
+
+    if buttons.just_pressed(GamepadButton::new(gamepad, GamepadButtonType::RightTrigger)) {
+        println!("SHOOT");
+    }
+    for button_event in button_evr.iter() {
+        if button_event.value == 1.0 {
+            println!("Button pressed: {:?}", button_event.button_type);
+        }
+    }
+
+    // Mouvement avec le stick analogique gauche
+    if let Some(x_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::LeftStickX)) {
+        direction.x += x_axis;
+    }
+    if let Some(y_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::LeftStickY)) {
+        direction.z -= y_axis;
+    }
+
+    // Rotation avec le stick analogique droit
+    if let Some(x_axis) = axes.get(GamepadAxis::new(gamepad, GamepadAxisType::RightStickX)) {
+        rotation *= Quat::from_rotation_y(-x_axis * 0.05);
     }
 
     // Normaliser la direction pour un mouvement cohérent en diagonale
@@ -246,42 +269,42 @@ pub fn player_movement(
     }
 
     let speed = WALL_SIZE; // Vitesse de déplacement en unités par seconde
-    let movement = current_rotation * (direction * speed * time.delta_seconds());
+    let movement = rotation * (direction * speed * time.delta_seconds());
     let new_position = current_position + movement;
-
-    // Appliquer la rotation
-    let new_rotation = current_rotation * Quat::from_rotation_y(rotation_delta);
 
     // Vérifier les collisions
     let wall_query = param_set.p1();
     if !will_collide_with_wall(new_position, &wall_query) {
+        // println!("the new position {:?}" , new_position);
         let mut binding = param_set.p0();
         let mut player_transform = binding.single_mut();
 
-        if new_position != player_transform.translation || new_rotation != player_transform.rotation {
-            // Envoyer la nouvelle position au serveur
-            let mes = Message {
+        if new_position != player_transform.translation || rotation != player_transform.rotation {
+            // send new position to the server
+            let mut mes = Message {
                 action: String::from("move"),
                 level: None,
                 players: None,
                 curr_player: None,
                 position: Some(crate::Vec3::fromV3(
-                    new_position.x,
-                    new_position.y,
-                    new_position.z,
+                    current_position.x,
+                    current_position.y,
+                    current_position.z,
                 )),
                 senderid: Some(global_data.mess.curr_player.clone().unwrap().id),
-                rotation: Some(new_rotation),
+                rotation: Some(rotation),
             };
             let json_data = serde_json::to_string(&mes).unwrap();
+
             global_data
                 .socket
                 .send_to(json_data.as_bytes(), global_data.ip_address.clone());
         }
 
         // Deuxième passe : appliquer les changements
+
         player_transform.translation = new_position;
-        player_transform.rotation = new_rotation;
+        player_transform.rotation = rotation;
     }
 }
 pub fn will_collide_with_wall(
@@ -312,17 +335,22 @@ pub fn camera_follow_player(
         // for mut camera_transform in camera_query.iter_mut() {
         if let Ok(mut camera_transform) = camera_query.get_single_mut() {
             // Positionnez la caméra juste au-dessus de la tête du joueur
-            let camera_offset = Vec3::new(0.0, WALL_SIZE / 2.0, 0.0); // Ajustez la hauteur (1.5) selon vos besoins
-            camera_transform.translation = player_transform.translation + camera_offset;
+            // let camera_offset = Vec3::new(0.0, WALL_SIZE / 2.0, -1.0); // Ajustez la hauteur (1.5) selon vos besoins
+            // camera_transform.translation = player_transform.translation + Vec3::new(-5.0, 0.5, -1.0);
+            // camera_transform.rotation = player_transform.rotation;
 
-            // Calculez la direction vers laquelle le joueur regarde
-            let forward = player_transform.forward();
+            // // Calculez la direction vers laquelle le joueur regarde
+            // let forward = player_transform.forward();
 
-            // Positionnez un point de focus légèrement devant le joueur
-            let focus_point = player_transform.translation - forward * 10.0; // Le '2.0' détermine la distance du point de focus
+            // // Positionnez un point de focus légèrement devant le joueur
+            // let focus_point = player_transform.translation - forward * 15.0; // Le '2.0' détermine la distance du point de focus
 
-            // Faites regarder la caméra vers ce point de focus
-            camera_transform.look_at(focus_point, Vec3::Y);
+            // // Faites regarder la caméra vers ce point de focus
+            // camera_transform.look_at(focus_point, Vec3::Y);
+            let camera_offset = Vec3::new(0.0, 0.25, 1.0); 
+            camera_transform.translation = player_transform.translation + player_transform.rotation * camera_offset;
+
+            camera_transform.rotation = player_transform.rotation;
         }
     }
 }
