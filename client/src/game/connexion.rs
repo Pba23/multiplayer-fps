@@ -42,7 +42,7 @@ pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<Ser
                         if player.id == sender_id {
                             // println!("Updated position for player {:?}", rotation);
                             player.position = Some(new_position);
-                            player.rotation = Some(rotation.conjugate());
+                            player.rotation = Some(rotation);
                             break;
                         }
                     }

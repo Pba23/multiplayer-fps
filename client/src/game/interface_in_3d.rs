@@ -119,7 +119,7 @@ pub fn setup(
             entity.insert(Player);
         } else {
             let mut entity = commands.spawn(SceneBundle {
-                scene: asset_server.load("Soldier.glb#Scene0"),
+                scene: asset_server.load("Soldiers.glb#Scene0"),
                 transform: Transform {
                     translation: Vec3::new(
                         start_x as f32 * WALL_SIZE,
@@ -307,7 +307,7 @@ pub fn player_movement(
                     current_position.z,
                 )),
                 senderid: Some(global_data.mess.curr_player.clone().unwrap().id),
-                rotation: Some(rotation),
+                rotation: Some(rotation)
             };
             let json_data = serde_json::to_string(&mes).unwrap();
 
