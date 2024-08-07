@@ -84,40 +84,6 @@ pub struct MyChannel {
    pub rx: Arc<Mutex<UnboundedReceiver<String>>>,
 }
 
-// Entry point
-// #[tokio::main]
-// async fn main() -> io::Result<()>  {
-//     // Capture username and IP address from the terminal
-//     let username = prompt("Enter your username: ");
-//     let ip_address = prompt("Enter server IP address: ");
-//     let socket = UdpSocket::bind("0.0.0.0:0").unwrap(); // "0" signifie que le système choisit un port libre
-
-//     // Initialize the state_rx and input_tx channels
-//     let (state_tx, state_rx) = mpsc::channel(32);
-//     let (input_tx, input_rx) = mpsc::channel(32);
-
-//     let msg = b"Hello, server!";
-//     socket.send_to(msg, ip_address.clone()).unwrap();
-//     // Initialize the Bevy application
-// App::new()
-//     .add_plugins(DefaultPlugins)
-//     .insert_resource(ServerDetails {
-//         ip_address,
-//         username,
-//         state_rx,
-//         input_tx,
-//         socket
-//     })
-//     .add_state::<LocalGameState>()
-//     .add_startup_system(setup)
-//     .add_system(update_state)
-//     .add_system(handle_input.run_if(in_state(LocalGameState::Playing)))
-//     .run();
-// Ok(())
-// }
-
-
-
 fn main() {
     // Capture username and IP address from the terminal
     let username = prompt("Enter your username: ");
@@ -154,8 +120,6 @@ fn main() {
     };
 
     listen(socket.try_clone().unwrap() , channel);   
-
-
 
     App::new()
         .add_plugins(DefaultPlugins)
@@ -200,61 +164,3 @@ fn prompt(message: &str) -> String {
     input.trim().to_string()
 }
 
-// // Setup function to initialize the Bevy window
-// fn setup(mut commands: Commands) {
-//     commands.spawn(Camera2dBundle::default());
-// }
-
-// // System to update the game state
-// fn update_state(
-//     mut next_state: ResMut<NextState<LocalGameState>>,
-//     mut server_details: ResMut<ServerDetails>,
-// ) {
-//     if let Ok(new_state) = server_details.state_rx.try_recv() {
-//         // Update the game state based on the received state
-//         // This is a placeholder - you'll need to implement the actual state update logic
-//         next_state.set(LocalGameState::Playing);
-//     }
-// }
-
-// // System to handle player input
-// fn handle_input(keyboard_input: Res<Input<KeyCode>>, mut server_details: ResMut<ServerDetails>) {
-//     let direction = if keyboard_input.pressed(KeyCode::W) {
-//         Vec2::new(0.0, 1.0)
-//     } else if keyboard_input.pressed(KeyCode::S) {
-//         Vec2::new(0.0, -1.0)
-//     } else if keyboard_input.pressed(KeyCode::A) {
-//         Vec2::new(-1.0, 0.0)
-//     } else if keyboard_input.pressed(KeyCode::D) {
-//         Vec2::new(1.0, 0.0)
-//     } else {
-//         Vec2::ZERO
-//     };
-
-//     if direction != Vec2::ZERO {
-//         let input = PlayerInput::Move { id: 1, direction }; // Example player ID
-//         let _ = server_details.input_tx.try_send(input);
-//     }
-// }
-
-// // use tokio::net::UdpSocket;
-// // use std::io;
-
-// // #[tokio::main]
-// // async fn main() -> io::Result<()> {
-// //     // Crée une socket UDP pour le client
-// //     let socket = UdpSocket::bind("127.0.0.1:0").await?; // "0" signifie que le système choisit un port libre
-// //     let server_addr = "127.0.0.1:8080";
-
-// //     // Le message à envoyer au serveur
-// //     let msg = b"Hello, server!";
-// //     socket.send_to(msg, server_addr).await?;
-
-// //     // Réception de la réponse du serveur
-// //     let mut buf = vec![0u8; 32];
-// //     let (len, addr) = socket.recv_from(&mut buf).await?;
-
-// //     println!("Received {:?} bytes from {:?}: {:?}", len, addr, &buf[..len]);
-
-// //     Ok(())
-// // }

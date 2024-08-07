@@ -79,6 +79,7 @@ pub fn setup(
     });
 
     // Setup player entity
+    print!("-------------------- level {:?}", global_data.mess.level.clone().unwrap());
     let labyrinth = generate_labyrinth(global_data.mess.level.unwrap() as u8);
     // Find starting positions (positions with value 2)
     let mut starting_positions = Vec::new();

@@ -4,6 +4,10 @@ use std::net::SocketAddr;
 use std::time::{Duration, Instant };
 use tokio::time::timeout;
 use tokio::net::UdpSocket;
+use clap::Parser;
+
+
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
@@ -16,6 +20,13 @@ pub struct Player {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct GameState {
     players: Vec<Player>,
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+     #[arg(short, long, default_value = "1")]
+    level: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,6 +76,13 @@ impl Server {
         }
     }
     pub async fn accept(&mut self)  {
+        let args = Args::parse();
+
+        if let Some(level) = args.level {
+            println!("Level: {}", level);
+        } else {
+            println!("No level specified");
+        }
         let mut buf = [0; 1024];
         loop {
             // println!("wait");
@@ -95,7 +113,7 @@ impl Server {
                         self.timer = Instant::now()
                     } else if self.timer.elapsed() > Duration::from_secs(10) {
                         println!("finish");
-                        self.broadcast(Message::new("start".to_string(), Some(1), Some(self.clients.clone()) ,  Some(Vec3 { x: 0.0, y: 0.0, z: 0.0 }))).await;
+                        self.broadcast(Message::new("start".to_string(), args.level, Some(self.clients.clone()) ,  Some(Vec3 { x: 0.0, y: 0.0, z: 0.0 }))).await;
                         break;
                     }
                 }

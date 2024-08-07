@@ -16,7 +16,7 @@ pub struct RadarPlayer;
 #[derive(Component)]
 pub struct RadarOtherPlayer;
 
-pub fn setup_radar(mut commands: Commands, _asset_server: Res<AssetServer>, _global_data : Res<ServerDetails>) {
+pub fn setup_radar(mut commands: Commands, _asset_server: Res<AssetServer>, global_data : Res<ServerDetails>) {
     let radar_size = 200.0;
     let cell_size = radar_size / LABYRINTH_WIDTH as f32;
 
@@ -35,7 +35,7 @@ pub fn setup_radar(mut commands: Commands, _asset_server: Res<AssetServer>, _glo
         .insert(RadarBackground);
 
     // Walls
-    let labyrinth = generate_labyrinth(1);
+    let labyrinth = generate_labyrinth(global_data.mess.level.unwrap() as u8);
     for (y, row) in labyrinth.iter().enumerate().rev() {
         for (x, &cell) in row.iter().enumerate().rev() {
             if cell == 1 {
