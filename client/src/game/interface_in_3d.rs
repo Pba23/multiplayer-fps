@@ -13,7 +13,7 @@ pub struct OtherPlayer {
     pub id: u32,
 }
 
-#[derive(Component)]
+#[derive(Component)]    
 
 pub struct Player;
 
@@ -99,23 +99,37 @@ pub fn setup(
     for pl in &global_data.mess.players.clone().unwrap() {
         let (start_x, start_y) = starting_positions[pl.id as usize - 1];
         // if let Some(model) = &player_model.0 {
-        let mut entity = commands.spawn(SceneBundle {
-            scene: asset_server.load("new_main2.glb#Scene0"),
-            transform: Transform {
-                translation: Vec3::new(
-                    start_x as f32 * WALL_SIZE,
-                    3.5,
-                    -(start_y as f32) * WALL_SIZE,
-                ), // Augmentez y pour élever le modèle
-                scale: Vec3::splat(0.1), // Ajustez l'échelle si nécessaire
-                ..Default::default()
-            },
-            ..Default::default()
-        });
+        
 
         if pl.id == global_data.mess.clone().curr_player.unwrap().id {
+            let mut entity = commands.spawn(SceneBundle {
+                scene: asset_server.load("new_main2.glb#Scene0"),
+                transform: Transform {
+                    translation: Vec3::new(
+                        start_x as f32 * WALL_SIZE,
+                        2.5,
+                        -(start_y as f32) * WALL_SIZE,
+                    ), // Augmentez y pour élever le modèle
+                    scale: Vec3::splat(0.1), // Ajustez l'échelle si nécessaire
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
             entity.insert(Player);
         } else {
+            let mut entity = commands.spawn(SceneBundle {
+                scene: asset_server.load("Soldier.glb#Scene0"),
+                transform: Transform {
+                    translation: Vec3::new(
+                        start_x as f32 * WALL_SIZE,
+                        0.05,
+                        -(start_y as f32) * WALL_SIZE,
+                    ), // Augmentez y pour élever le modèle
+                    scale: Vec3::splat(0.1), // Ajustez l'échelle si nécessaire
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
             entity.insert(OtherPlayer { id: pl.id });
         }
         // } else {
@@ -288,7 +302,7 @@ pub fn player_movement(
                 curr_player: None,
                 position: Some(crate::Vec3::fromV3(
                     current_position.x,
-                    current_position.y,
+                    current_position.y * 0.05,
                     current_position.z,
                 )),
                 senderid: Some(global_data.mess.curr_player.clone().unwrap().id),
@@ -330,28 +344,22 @@ pub fn will_collide_with_wall(
 pub fn camera_follow_player(
     player_query: Query<&Transform, With<Player>>,
     mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,
+    time: Res<Time>,
 ) {
-    if let Ok(player_transform) = player_query.get_single() {
-        // for mut camera_transform in camera_query.iter_mut() {
-        if let Ok(mut camera_transform) = camera_query.get_single_mut() {
-            // Positionnez la caméra juste au-dessus de la tête du joueur
-            // let camera_offset = Vec3::new(0.0, WALL_SIZE / 2.0, -1.0); // Ajustez la hauteur (1.5) selon vos besoins
-            // camera_transform.translation = player_transform.translation + Vec3::new(-5.0, 0.5, -1.0);
-            // camera_transform.rotation = player_transform.rotation;
+    if let (Ok(player_transform), Ok(mut camera_transform)) = (player_query.get_single(), camera_query.get_single_mut()) {
+        let camera_offset = Vec3::new(0.0, 0.25, 0.005);
+        let target_position = player_transform.translation + player_transform.rotation * camera_offset;
+        let target_rotation = player_transform.rotation;
 
-            // // Calculez la direction vers laquelle le joueur regarde
-            // let forward = player_transform.forward();
+        // Facteur de lissage (ajustez selon vos préférences)
+        let smoothness = 15.0;
+        let delta_time = time.delta_seconds();
 
-            // // Positionnez un point de focus légèrement devant le joueur
-            // let focus_point = player_transform.translation - forward * 15.0; // Le '2.0' détermine la distance du point de focus
+        // Interpolation linéaire de la position
+        camera_transform.translation = camera_transform.translation.lerp(target_position, smoothness * delta_time);
 
-            // // Faites regarder la caméra vers ce point de focus
-            // camera_transform.look_at(focus_point, Vec3::Y);
-            let camera_offset = Vec3::new(0.0, 0.25, 1.0); 
-            camera_transform.translation = player_transform.translation + player_transform.rotation * camera_offset;
-
-            camera_transform.rotation = player_transform.rotation;
-        }
+        // Interpolation sphérique de la rotation
+        camera_transform.rotation = camera_transform.rotation.slerp(target_rotation, smoothness * delta_time);
     }
 }
 // pub fn camera_follow_player(

@@ -50,7 +50,7 @@ pub fn player_shoot(
                     emissive: Color::rgb(1.0, 0.0, 0.0),   // Faire briller le laser
                     ..default()
                 }),
-                transform: Transform::from_translation(player_transform.translation+ Vec3::new(0.0, 2.0, 0.0))
+                transform: Transform::from_translation(player_transform.translation)
                     .looking_to(ray_direction, Vec3::Y),
                 ..default()
             }, 
@@ -79,13 +79,14 @@ pub fn update_laser_positions(
 pub fn check_laser_collisions(
     mut commands: Commands,
     laser_query: Query<(Entity, &Transform, &Laser)>,
-    player_query: Query<(Entity, &Transform), With<OtherPlayer>>,
+    player_query: Query<(Entity, &Transform), With<Wall>>,
 ) {
     for (laser_entity, laser_transform, laser) in laser_query.iter() {
         if laser.lifetime.finished() {
             commands.entity(laser_entity).despawn();
         } else {
             for (player_entity, player_transform) in player_query.iter() {
+                println!("playerddd djdjdjd");
                 if (player_transform.translation - laser_transform.translation).length() < 1.0 {
                     println!("Player hit by laser!");
                     commands.entity(player_entity).despawn();

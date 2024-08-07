@@ -1,6 +1,6 @@
 use std::{borrow::BorrowMut, net::UdpSocket, thread, time::Duration};
 
-use bevy::{asset::Assets, math::Vec3, pbr::{PbrBundle, StandardMaterial}, prelude::{shape, Color, Commands, Component, Entity, Mesh, Query, Res, ResMut, Transform, With}, time::{Timer, TimerMode}, transform, utils::default};
+use bevy::{asset::Assets, math::{Quat, Vec3}, pbr::{PbrBundle, StandardMaterial}, prelude::{shape, Color, Commands, Component, Entity, Mesh, Query, Res, ResMut, Transform, With}, time::{Timer, TimerMode}, transform, utils::default};
 use serde_json::from_str;
 
 use crate::{Laser, Message, MyChannel, OtherPlayer, Player, RadarOtherPlayer, ServerDetails, ShootMessage};
@@ -42,7 +42,7 @@ pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<Ser
                         if player.id == sender_id {
                             // println!("Updated position for player {:?}", rotation);
                             player.position = Some(new_position);
-                            player.rotation = Some(rotation);
+                            player.rotation = Some(rotation.conjugate());
                             break;
                         }
                     }
