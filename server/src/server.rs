@@ -177,13 +177,19 @@ impl Server {
     }
     async fn broadcast_str(&self , mes : String) {
         // Broadcast the message to all clients
+        let mess : Message = from_str(&mes).unwrap();
+        let sender_id = mess.senderid.unwrap();
         for client in self.clients.iter() {
-               self.socket
-                   .send_to(mes.as_bytes(), &client.addr)
-                   .await
-                   .expect("Failed to send data");
+            if client.id == sender_id {
+                continue;
+            }
+            self.socket
+                .send_to(mes.as_bytes(), &client.addr)
+                .await
+                .expect("Failed to send data");
        }
-   }
+    }
+    
 }
 
 // impl Client {

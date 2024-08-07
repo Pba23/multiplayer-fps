@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+pub use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::math;
 use serde::{Deserialize, Serialize};
 use serde_json::from_str;
@@ -9,6 +10,7 @@ use std::{
 pub mod game;
 
 use game::{connexion::{listen, update_ressources}, interface_in_2d::*};
+use game::fps_display::*;
 use game::interface_in_3d::*;
 use game::laser::*;
 
@@ -95,7 +97,7 @@ fn main() {
         .send_to(mes, ip_address.clone())
         .expect("failed to connect");
 
-    println!("Waiting for te game to start");
+    println!("Waiting for the game to start");
     let mut buf = [0; 1024];
     let mut mess = Message{action : String::new() , level : None , players : None , curr_player : None , position : None , senderid : None , rotation : None};
 
@@ -132,6 +134,9 @@ fn main() {
         .insert_resource(channel_clone)
         .add_startup_system(setup)
         .add_startup_system(setup_radar)
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_startup_system(setup_fps_counter)
+        .add_system(update_fps_text)
         .add_system(player_shoot)
         .add_system(update_ressources)
         .add_system(update_laser_positions)
