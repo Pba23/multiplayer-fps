@@ -61,8 +61,10 @@ pub fn setup(
     println!("GLOBAL VARIABLES {:?}", global_data);
     // Define colors for player, wall, and floor
     let player_color = Color::rgb(0.0, 1.0, 0.0); // Green
-    let wall_color = Color::rgb(0.1, 0.1, 0.1); // black
-    let floor_color = Color::rgb(0.95, 0.95, 0.95); // Light grey
+    // let wall_color = Color::rgb(0.1, 0.1, 0.1); // black
+    // let floor_color = Color::rgb(0.95, 0.95, 0.95); // Light grey
+    let wall_texture_handle = asset_server.load("wall_texture.png");
+    let floor_texture_handle = asset_server.load("floor_texture.png");
 
     // Create materials
     let _player_material = materials.add(StandardMaterial {
@@ -70,11 +72,11 @@ pub fn setup(
         ..Default::default()
     });
     let wall_material = materials.add(StandardMaterial {
-        base_color: wall_color,
+        base_color_texture: Some(wall_texture_handle),
         ..Default::default()
     });
     let floor_material = materials.add(StandardMaterial {
-        base_color: floor_color,
+        base_color_texture: Some(floor_texture_handle),
         ..Default::default()
     });
 
@@ -104,14 +106,14 @@ pub fn setup(
 
         if pl.id == global_data.mess.clone().curr_player.unwrap().id {
             let mut entity = commands.spawn(SceneBundle {
-                scene: asset_server.load("new_main2.glb#Scene0"),
+                scene: asset_server.load("armes.glb#Scene0"),
                 transform: Transform {
                     translation: Vec3::new(
                         start_x as f32 * WALL_SIZE,
                         2.5,
                         -(start_y as f32) * WALL_SIZE,
                     ), // Augmentez y pour élever le modèle
-                    scale: Vec3::splat(0.1), // Ajustez l'échelle si nécessaire
+                    scale: Vec3::splat(0.05), // Ajustez l'échelle si nécessaire
                     ..Default::default()
                 },
                 ..Default::default()
@@ -119,7 +121,7 @@ pub fn setup(
             entity.insert(Player);
         } else {
             let mut entity = commands.spawn(SceneBundle {
-                scene: asset_server.load("Soldiers.glb#Scene0"),
+                scene: asset_server.load("Soldier.glb#Scene0"),
                 transform: Transform {
                     translation: Vec3::new(
                         start_x as f32 * WALL_SIZE,
@@ -348,7 +350,7 @@ pub fn camera_follow_player(
     time: Res<Time>,
 ) {
     if let (Ok(player_transform), Ok(mut camera_transform)) = (player_query.get_single(), camera_query.get_single_mut()) {
-        let camera_offset = Vec3::new(0.0, 0.25, 0.005);
+        let camera_offset = Vec3::new(0.0, 0.25, 0.25);
         let target_position = player_transform.translation + player_transform.rotation * camera_offset;
         let target_rotation = player_transform.rotation;
 

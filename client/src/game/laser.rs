@@ -40,22 +40,24 @@ pub fn player_shoot(
     if mouse_button_input.just_pressed(MouseButton::Left) || 
         buttons.just_pressed(GamepadButton::new(gamepad, GamepadButtonType::RightTrigger)) {
         let ray_direction = player_transform.forward();
+        let avance =  ray_direction * 300.0 * 0.02;
         
         // Créer le laser
         commands.spawn((
             PbrBundle {
-                mesh: meshes.add(Mesh::from(shape::Box::new(0.05, 0.05, 80.0))),
+                mesh: meshes.add(Mesh::from(shape::Box::new(0.05, 0.05, 10.0))),
                 material: materials.add(StandardMaterial {
-                    base_color: Color::rgb(1.0, 0.0, 0.0), // Couleur rouge pour le laser
+                    base_color: Color::rgb(0.8, 0.6, 0.2), // Couleur rouge pour le laser
                     emissive: Color::rgb(1.0, 0.0, 0.0),   // Faire briller le laser
                     ..default()
                 }),
-                transform: Transform::from_translation(player_transform.translation)
+                transform: Transform::from_translation(player_transform.translation + avance)
                     .looking_to(ray_direction, Vec3::Y),
                 ..default()
+                
             }, 
             Laser {
-                lifetime: Timer::from_seconds(0.5,TimerMode::Once), // Le laser dure 0.5 secondes
+                lifetime: Timer::from_seconds(5.0,TimerMode::Once), // Le laser dure 0.5 secondes
             },
         ));
         let  mes = ShootMessage{action : String::from("shoot") , origin : player_transform.translation  , senderid : globaldata.mess.curr_player.clone().unwrap().id , direction : -ray_direction};
@@ -68,6 +70,7 @@ pub fn update_laser_positions(
     time: Res<Time>,
     mut laser_query: Query<(&mut Transform, &mut Laser)>,
 ) {
+
     for (mut transform, mut laser) in laser_query.iter_mut() {
         laser.lifetime.tick(time.delta());
         if !laser.lifetime.finished() {
@@ -86,7 +89,7 @@ pub fn check_laser_collisions(
             commands.entity(laser_entity).despawn();
         } else {
             for (player_entity, player_transform) in player_query.iter() {
-                println!("playerddd djdjdjd");
+                // println!("playerddd djdjdjd");:
                 if (player_transform.translation - laser_transform.translation).length() < 1.0 {
                     println!("Player hit by laser!");
                     commands.entity(player_entity).despawn();

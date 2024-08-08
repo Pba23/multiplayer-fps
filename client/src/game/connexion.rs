@@ -59,21 +59,24 @@ pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<Ser
                 let player = player.unwrap();
                 if player.position.is_some() {
                     println!("in some pl {:?}" , player.position);
+                    let avance =  mess.direction * 300.0 * 0.02;
+
                     // Créer le laser
                     commands.spawn((
                         PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Box::new(0.05, 0.05, 80.0))),
+                            mesh: meshes.add(Mesh::from(shape::Box::new(0.05, 0.05, 10.0))),
                             material: materials.add(StandardMaterial {
                                 base_color: Color::rgb(1.0, 0.0, 0.0), // Couleur rouge pour le laser
                                 emissive: Color::rgb(1.0, 0.0, 0.0),   // Faire briller le laser
                                 ..default()
                             }),
-                            transform: Transform::from_translation(mess.origin)
+                            transform: Transform::from_translation(mess.origin + avance)
                                 .looking_to(mess.direction, Vec3::Y),
                             ..default()
+                        
                         },
                         Laser {
-                            lifetime: Timer::from_seconds(2.0,TimerMode::Once), // Le laser dure 0.5 secondes
+                            lifetime: Timer::from_seconds(5.0,TimerMode::Once), // Le laser dure 0.5 secondes
                         },
                     ));
                 }
