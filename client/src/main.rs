@@ -15,7 +15,9 @@ use game::interface_in_3d::*;
 use game::laser::*;
 
 // Structs
-#[derive(Debug, Clone, Serialize, Deserialize)]
+// #[derive(Component)]
+
+#[derive(Debug, Clone, Serialize, Deserialize )]
 pub struct Player {
     pub id: u32,
     pub position: Option<Vec3>,

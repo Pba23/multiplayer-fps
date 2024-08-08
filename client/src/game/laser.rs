@@ -1,6 +1,9 @@
 pub use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
-use crate::{game::interface_in_3d::*, Message, ServerDetails};
+use crate::game::cylinder;
+use crate::{game::interface_in_3d::*, Message, ServerDetails , game::vector3d::*};
+
+use super::cylinder::Object;
 
 #[derive(Component)]
 pub struct Laser {
@@ -60,7 +63,10 @@ pub fn player_shoot(
                 lifetime: Timer::from_seconds(5.0,TimerMode::Once), // Le laser dure 0.5 secondes
             },
         ));
-        let  mes = ShootMessage{action : String::from("shoot") , origin : player_transform.translation  , senderid : globaldata.mess.curr_player.clone().unwrap().id , direction : -ray_direction};
+        if intersect_cylinder(cylinder::Ray{origin : Vector3D::from_v3(player_transform.translation) , direction :  Vector3D::from_v3(ray_direction)} , globaldata.mess.players.clone().unwrap() , 1.0 ) {
+            println!("hit the player")
+        }
+        let  mes = ShootMessage{action : String::from("shoot") , origin : player_transform.translation  , senderid : globaldata.mess.curr_player.clone().unwrap().id , direction : ray_direction};
         let json_data = serde_json::to_string(&mes).unwrap();
         globaldata.socket.send_to(json_data.as_bytes(), globaldata.ip_address.clone()).expect("failed to send shoot");
     }
@@ -76,6 +82,7 @@ pub fn update_laser_positions(
         if !laser.lifetime.finished() {
             let forward = transform.forward();
             transform.translation += forward * 300.0 * time.delta_seconds();
+            // println!("next pos {}" , transform.translation);
         }
     }
 }
@@ -99,4 +106,20 @@ pub fn check_laser_collisions(
             }
         }
     }
+}
+
+
+fn intersect_cylinder(ray: cylinder::Ray , players: Vec<crate::Player>, cyl_radius: f32) -> bool {
+    for p in players {
+        if let  Some(position) = p.position {
+            let cylinder = cylinder::Cylinder::new(Vector3D::from_v3b(position), Vector3D::new(0.0, 1.0, 0.0), 1.0, 5.5);
+            
+            if cylinder.intersect(&ray).is_some() {
+                println!("HIT PLAYER");
+                return true
+            }
+
+        }
+    }
+    false
 }

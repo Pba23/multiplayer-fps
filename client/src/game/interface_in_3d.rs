@@ -6,6 +6,7 @@ pub use bevy::gltf::GltfMesh;
 use bevy::input::gamepad::{GamepadButtonChangedEvent, GamepadEvent};
 use bevy::input::mouse::MouseMotion;
 pub use bevy::prelude::*;
+use bevy::render::mesh;
 pub const WALL_SIZE: f32 = 7.0; // Taille du mur
 
 #[derive(Component)]
@@ -24,31 +25,6 @@ pub struct Wall;
 pub struct MainCamera;
 pub const LABYRINTH_WIDTH: usize = 20;
 pub const LABYRINTH_HEIGHT: usize = 20;
-// pub fn load_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
-//     let player_model = asset_server.load("assets/Soldier.glb");
-//     commands.insert_resource(PlayerModel(Some(player_model)));
-// }
-
-// #[derive(Resource, Default)]
-// pub struct PlayerModel(Option<Handle<Scene>>);
-// pub fn check_model_loaded(player_model: Res<PlayerModel>, asset_server: Res<AssetServer>) {
-//     if let Some(handle) = &player_model.0 {
-//         match asset_server.get_load_state(handle) {
-//             LoadState::Loading => println!("Le modèle est en cours de chargement..."),
-//             LoadState::Loaded => println!("Le modèle est chargé avec succès!"),
-//             LoadState::Failed => println!("Échec du chargement du modèle!"),
-//             LoadState::Unloaded => println!("Le modèle n'est pas chargé."),
-//             _ => println!("autreeeee"),
-//         }
-//     } else {
-//         println!("Aucun modèle n'est assigné.");
-//     }
-// }
-// pub fn debug_scene_entities(query: Query<Entity, With<Handle<Scene>>>) {
-//     for entity in query.iter() {
-//         println!("Entité avec SceneBundle trouvée: {:?}", entity);
-//     }
-// }
 
 pub fn setup(
     mut commands: Commands,
@@ -118,7 +94,7 @@ pub fn setup(
                 },
                 ..Default::default()
             });
-            entity.insert(Player);
+            entity.insert(Player{});
         } else {
             let mut entity = commands.spawn(SceneBundle {
                 scene: asset_server.load("Soldier.glb#Scene0"),
@@ -134,29 +110,33 @@ pub fn setup(
                 ..Default::default()
             });
             entity.insert(OtherPlayer { id: pl.id });
-        }
-        // } else {
-        //     // Fallback to a cube if the model isn't loaded yet
-        //     let mut entity = commands.spawn(PbrBundle {
-        //         mesh: meshes.add(Mesh::from(shape::Cube { size: 2.0 })),
-        //         material: materials.add(Color::rgb(0.0, 1.0, 0.0).into()),
-        //         transform: Transform {
-        //             translation: Vec3::new(
-        //                 start_x as f32 * WALL_SIZE,
-        //                 0.5,
-        //                 -(start_y as f32) * WALL_SIZE,
-        //             ),
-        //             ..Default::default()
-        //         },
-        //         ..Default::default()
-        //     });
 
-        //     if pl.id == global_data.mess.clone().curr_player.unwrap().id {
-        //         entity.insert(Player);
-        //     } else {
-        //         entity.insert(OtherPlayer);
-        //     }
-        // }
+
+            // let cylinder = Mesh::from(bevy::render::mesh::shape::Cylinder {
+            //     radius: 1.0,
+            //     height: 5.5,
+            //     resolution: 16, // Nombre de segments dans le cercle de base
+            //     segments: 8,    // Nombre de segments le long de la hauteur
+            // });
+        
+            // // Ajouter l'entité cylindre
+            // let mut entity =commands.spawn(PbrBundle {
+            //     mesh: meshes.add(cylinder),
+            //     material: materials.add(StandardMaterial {
+            //         base_color: Color::rgb(0.7, 0.2, 0.2),
+            //         ..Default::default()
+            //     }),
+            //     transform: Transform::from_xyz(start_x as f32 * WALL_SIZE, 0.,  -(start_y as f32) * WALL_SIZE),
+            //     ..Default::default()
+            // });
+            // entity.insert(OtherPlayer { id: pl.id });
+
+
+
+
+
+        }
+
     }
 
     // Create entities for the labyrinth
@@ -242,7 +222,6 @@ pub fn player_movement(
 
     // Gestion des entrées clavier
     if keyboard_input.pressed(KeyCode::Up) {
-        println!("keyup");
         direction.z -= 1.0;
     }
     if keyboard_input.pressed(KeyCode::Down) {
@@ -350,7 +329,7 @@ pub fn camera_follow_player(
     time: Res<Time>,
 ) {
     if let (Ok(player_transform), Ok(mut camera_transform)) = (player_query.get_single(), camera_query.get_single_mut()) {
-        let camera_offset = Vec3::new(0.0, 0.25, 0.25);
+        let camera_offset = Vec3::new(0.04, 0.25, 0.25);
         let target_position = player_transform.translation + player_transform.rotation * camera_offset;
         let target_rotation = player_transform.rotation;
 
@@ -365,39 +344,7 @@ pub fn camera_follow_player(
         camera_transform.rotation = camera_transform.rotation.slerp(target_rotation, smoothness * delta_time);
     }
 }
-// pub fn camera_follow_player(
-//     player_query: Query<&Transform, With<Player>>,
-//     mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,
-// ) {
-//     if let Ok(player_transform) = player_query.get_single() {
-//         for mut camera_transform in camera_query.iter_mut() {
-//             // Define the radius of the circular path and height offset
-            // let radius: f32 = 5.0;
-            // let height_offset: f32 = WALL_SIZE / 2.0;
 
-            // // Calculate the angle based on the player's rotation
-            // let yaw = player_transform.rotation.to_euler(EulerRot::YXZ).0;
-
-            // // Calculate the new camera position in a circle around the player
-            // let x = player_transform.translation.x + radius * yaw.cos();
-            // let z = player_transform.translation.z + radius * yaw.sin();
-            // let y = player_transform.translation.y + height_offset;
-
-            // // Update the camera's position
-            // camera_transform.translation = Vec3::new(x, y, z);
-
-            // // Calculate the forward direction based on the player's rotation
-            // let forward = player_transform.forward();
-
-            // // Calculate the focus point slightly in front of the player
-            // let focus_distance = 10.0;
-            // let focus_point = player_transform.translation + forward * focus_distance;
-
-            // // Make the camera look at the focus point through the player
-            // camera_transform.look_at(focus_point, Vec3::Y);
-//         }
-//     }
-// }
 
 pub fn setup_crosshair(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
