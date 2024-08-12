@@ -113,7 +113,7 @@ pub fn check_laser_collisions(
 
                 if let Some(players) = &mut globaldata.mess.players {
                     for player in players.iter_mut() {
-                        if player.id == laser.hitpoint.unwrap().playerid {
+                        if player.id == laser.hitpoint.unwrap().playerid && player.lives > 0{
                             // println!("Updated position for player {:?}", rotation);
                             player.lives -= 1;
                             break;
@@ -174,16 +174,20 @@ pub fn delete_dead_players(mut commands: Commands , curr_player : Query<(Entity 
     mut globaldata: ResMut<ServerDetails>) {
 
         if let Some(players) = &globaldata.mess.players {
+            println!("find player {}", player_query.iter_mut().count());
+
             for (entity ,   player) in player_query.iter_mut() {
                 for global_player in players {
-                    if player.id == player.id {
+                    if global_player.id == player.id {
                         if global_player.lives == 0 {
-                            println!("find the player");
-                            commands.entity(entity).despawn()
+                            // commands.entity(entity).despawn();
+                            commands.entity(entity).despawn_recursive()
                         }
                     } 
+                    
                 }
             }
+            println!("COUNT {}", player_query.iter_mut().count());
         }
 
 }

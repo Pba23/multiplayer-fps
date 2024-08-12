@@ -226,13 +226,13 @@ pub fn player_movement(
         rotation_delta -= event.delta.x * 0.005; // Ajustez la sensibilité ici
     }
     // Gestion des entrées clavier pour les déplacements latéraux
-    if keyboard_input.pressed(KeyCode::W) {
+    if keyboard_input.pressed(KeyCode::W) || keyboard_input.pressed(KeyCode::Z) {
         direction.z -= 1.0;
     }
     if keyboard_input.pressed(KeyCode::S) {
         direction.z += 1.0;
     }
-    if keyboard_input.pressed(KeyCode::A) {
+    if keyboard_input.pressed(KeyCode::A) || keyboard_input.pressed(KeyCode::Q) {
         direction.x -= 1.0;
     }
     if keyboard_input.pressed(KeyCode::D) {
