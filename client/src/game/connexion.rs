@@ -1,9 +1,9 @@
-use std::{borrow::BorrowMut, net::UdpSocket, thread, time::Duration};
+use std::{net::UdpSocket, thread};
 
-use bevy::{asset::Assets, math::{Quat, Vec3}, pbr::{PbrBundle, StandardMaterial}, prelude::{shape, Color, Commands, Component, Entity, Mesh, Query, Res, ResMut, Transform, With}, time::{Timer, TimerMode}, transform, utils::default};
+use bevy::{asset::Assets, math::Vec3, pbr::{PbrBundle, StandardMaterial}, prelude::{shape, Color, Commands,  Mesh,  Res, ResMut, Transform}, time::{Timer, TimerMode},  utils::default};
 use serde_json::from_str;
 
-use crate::{Laser, Message, MyChannel, OtherPlayer, Player, RadarOtherPlayer, ServerDetails, ShootMessage};
+use crate::{Laser, Message, MyChannel,  ServerDetails, ShootMessage};
 
 pub  fn listen(socket : UdpSocket , channel  :  MyChannel) {
     // Start a thread to listen for messages from the server
@@ -46,9 +46,9 @@ pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<Ser
                             break;
                         }
                     }
-                }//vous faites quoiiiiiiiiiii ???
+                }
             }else if mess.action == "shoot" {
-                println!("the player {:?} shoot",  mess.senderid);
+                // println!("the player {:?} shoot",  mess.senderid);
                 let mess : ShootMessage = from_str(&m).expect("ERROR");
                 let  mut player  = None;
                 for pl in globaldata.mess.players.clone().unwrap() {
@@ -58,7 +58,7 @@ pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<Ser
                 }
                 let player = player.unwrap();
                 if player.position.is_some() {
-                    println!("in some pl {:?}" , player.position);
+                 
                     let avance =  mess.direction * 300.0 * 0.02;
 
                     // Créer le laser
@@ -77,13 +77,12 @@ pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<Ser
                         },
                         Laser {
                             lifetime: Timer::from_seconds(5.0,TimerMode::Once), // Le laser dure 0.5 secondes
+                            hitpoint : mess.hitpoint,
+                            origin : mess.origin,
                         },
                     ));
                 }
             }    
         
     };
-}
-fn foward(v : Vec3) -> Vec3 {
-    -(v * Vec3::Z)
 }

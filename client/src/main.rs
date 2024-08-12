@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::from_str;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use std::{
-    io::{self, Write}, net::{SocketAddr, UdpSocket}, sync::{Arc, Mutex}, thread, time::Duration
+    io::{self, Write}, net::{SocketAddr, UdpSocket}, sync::{Arc, Mutex}
 };
 pub mod game;
 
@@ -23,7 +23,8 @@ pub struct Player {
     pub position: Option<Vec3>,
     pub addr: SocketAddr,
     pub username : String,
-    rotation : Option<Quat>
+    rotation : Option<Quat>,
+    pub lives  : u32
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -146,7 +147,8 @@ fn main() {
         .add_system(player_movement)
         .add_system(update_position)
         .add_system(camera_follow_player)
-        .add_system(update_radar)
+        .add_system(update_radar) 
+        .add_system(delete_dead_players)
         .run();
 }
 

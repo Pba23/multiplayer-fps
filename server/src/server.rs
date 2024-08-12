@@ -14,7 +14,8 @@ pub struct Player {
     pub id: u32,
     pub position: Option<Vec3>,
     pub addr: SocketAddr,
-    pub username : String
+    pub username : String,
+    pub lives : u32
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -100,7 +101,8 @@ impl Server {
                         id: self.clients.len() as u32 + 1, 
                         position: None,
                         addr,
-                        username : msg.to_string()
+                        username : msg.to_string(),
+                        lives : 3
                     };
                     self.clients.push(new_player.clone());
                 }

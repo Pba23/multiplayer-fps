@@ -48,6 +48,9 @@ impl Vector3D {
     pub fn from_v3b(v : crate::Vec3) -> Self {
         Self { x: v.x, y: v.y, z: v.z }
     }
+    pub fn to_v3(a : Self) -> Vec3 {
+        Vec3::new( a.x, a.y, a.z)
+    }
     // bevy::prelude::Vec3
 }
 
