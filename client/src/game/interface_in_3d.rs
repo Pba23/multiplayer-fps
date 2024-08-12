@@ -39,7 +39,7 @@ pub fn setup(
     let player_color = Color::rgb(0.0, 1.0, 0.0); // Green
     // let wall_color = Color::rgb(0.1, 0.1, 0.1); // black
     // let floor_color = Color::rgb(0.95, 0.95, 0.95); // Light grey
-    let wall_texture_handle = asset_server.load("wall_texture.png");
+    let wall_texture_handle = asset_server.load("wall_texture1.png");
     let floor_texture_handle = asset_server.load("floor_texture.png");
 
     // Create materials
@@ -186,7 +186,7 @@ pub fn setup(
     // Add a light source
     commands.spawn(PointLightBundle {
         point_light: PointLight {
-            intensity: 3000.0,
+            intensity: 30000.0,
             shadows_enabled: true,
             ..default()
         },
