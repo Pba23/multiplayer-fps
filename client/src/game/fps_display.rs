@@ -3,6 +3,9 @@ pub struct FpsText;
 
 use bevy::prelude::*;
 
+#[derive(Component)]
+struct GameOverText;
+
 pub fn setup_fps_counter(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         TextBundle::from_sections([
@@ -39,3 +42,27 @@ pub fn update_fps_text(mut query: Query<&mut Text, With<FpsText>>, diagnostics: 
         }
     }
 }
+
+pub fn display_game_over(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn((
+        TextBundle::from_section(
+            "Game Over",
+            TextStyle {
+                font: asset_server.load("FiraSans-Bold.ttf"),
+                font_size: 100.0,
+                color: Color::RED,
+            },
+        )
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            position: UiRect {
+                top: Val::Px(300.0),
+                left: Val::Px(400.0),
+                ..default()
+            },
+            ..default()
+        }),
+        GameOverText,
+    ));
+}
+

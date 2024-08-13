@@ -84,6 +84,19 @@ pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<Ser
                             origin : mess.origin,
                         },
                     ));
+
+                    if let Some(hit) = mess.hitpoint {
+                        if let Some(players) = &mut globaldata.mess.players {
+                            for player in players.iter_mut() {
+                                if player.id == hit.playerid && player.lives > 0{
+                                    // println!("Updated position for player {:?}", rotation);
+                                    player.lives -= 1;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
                 }
             }    
         

@@ -86,8 +86,6 @@ impl Server {
         }
         let mut buf = [0; 1024];
         loop {
-            // println!("wait");
-    
             // Timeout de 1 secondes pour l'appel à recv_from
             let recv_result = timeout(Duration::from_secs(1), self.socket.recv_from(&mut buf)).await;
     
@@ -132,40 +130,13 @@ impl Server {
             let cl : Vec<&Client> = self.clients.iter().filter(|c| c.addr == addr).collect();
             if let Some(pl) = cl.first() {
                 let msg = String::from_utf8_lossy(&buf[..c]);
-                
-                // let mut mess = Message::new(String::new(), None, None  , None);
-                // mess = from_str(&msg).expect("ERROR");
-                // println!("receive message from {:?} " ,  msg.to_string());
+
                 
                 self.broadcast_str(msg.to_string()).await;
             }
  
         }
     }
-
-
-    // async fn run(&mut self) {
-    //     loop {
-    //         //let mut clients = self.clients.clone();
-    //         for client in &mut self.clients {
-    //             while let Ok(input) = client.rx.try_recv() {
-    //                 client.handle_input(input).await;
-    //             }
-    //         }
-    //         self.broadcast_state().await;
-    //         tokio::time::sleep(tokio::time::Duration::from_millis(16)).await; // Run at ~60 FPS
-    //     }
-    // }
-
-    // async fn handle_input(&mut self, input: PlayerInput) {
-    //     match input {
-    //         PlayerInput::Move { id, direction } => {
-    //             if let Some(player) = self.state.players.iter_mut().find(|p| p.id == id) {
-    //                 // player.position += direction;
-    //             }
-    //         }
-    //     }
-    // }
 
     async fn broadcast(&self , mes : Message) {
          // Broadcast the message to all clients
@@ -193,13 +164,3 @@ impl Server {
     }
     
 }
-
-// impl Client {
-//     async fn handle_input(&mut self, input: PlayerInput) {
-//         match input {
-//             PlayerInput::Move { id, direction } => {
-//                     self.position += direction;
-//                 }
-//         }
-//     }
-// }

@@ -149,6 +149,7 @@ fn main() {
         .add_system(camera_follow_player)
         .add_system(update_radar) 
         .add_system(delete_dead_players)
+        .add_system(display_game_over.run_if(player_is_dead))
         .run();
 }
 
@@ -163,7 +164,9 @@ fn getcurrplayer(m: Message, s: String) -> Option<Player> {
     }
     None
 }
-
+fn player_is_dead(server_details: Res<ServerDetails>) -> bool {
+    !player_is_alive(server_details)
+}
 fn player_is_alive(server_details: Res<ServerDetails>) -> bool {
     if let Some(curr_player) = &server_details.mess.curr_player {
         if let Some(players) = &server_details.mess.players {

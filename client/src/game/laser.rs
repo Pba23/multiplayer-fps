@@ -13,8 +13,8 @@ pub struct Laser {
 }
 #[derive(Debug , Clone, Copy , Serialize, Deserialize)]
 pub struct hit_info {
-    point : Vec3,
-    playerid : u32
+    pub point : Vec3,
+    pub playerid : u32
 }
 #[derive(Component)]
 struct PlayerInfo {
@@ -41,7 +41,7 @@ pub fn player_shoot(
     mut materials: ResMut<Assets<StandardMaterial>>,
     time: Res<Time>,
     buttons: Res<Input<GamepadButton>>,
-    globaldata : Res<ServerDetails>
+    mut globaldata : ResMut<ServerDetails>
 
 ) {
     let player_transform= player_query.single();
@@ -74,6 +74,19 @@ pub fn player_shoot(
             }, 
             laser.clone(),
         ));
+
+        // lose life
+        if let Some(hit) = laser.hitpoint {
+            if let Some(players) = &mut globaldata.mess.players {
+                for player in players.iter_mut() {
+                    if player.id == hit.playerid && player.lives > 0{
+                        // println!("Updated position for player {:?}", rotation);
+                        player.lives -= 1;
+                        break;
+                    }
+                }
+            }
+        }
 
         let  mes = ShootMessage{action : String::from("shoot") , origin : laser.origin  , senderid : globaldata.mess.curr_player.clone().unwrap().id , direction : ray_direction  , hitpoint : laser.hitpoint};
         let json_data = serde_json::to_string(&mes).unwrap();
@@ -111,15 +124,15 @@ pub fn check_laser_collisions(
 
                 println!("HIT THE PLAYER {} " , laser.hitpoint.unwrap().playerid);
 
-                if let Some(players) = &mut globaldata.mess.players {
-                    for player in players.iter_mut() {
-                        // if player.id == laser.hitpoint.unwrap().playerid && player.lives > 0{
-                            // println!("Updated position for player {:?}", rotation);
-                            player.lives -= 1;
-                            break;
-                        // }
-                    }
-                }
+                // if let Some(players) = &mut globaldata.mess.players {
+                //     for player in players.iter_mut() {
+                //         if player.id == laser.hitpoint.unwrap().playerid && player.lives > 0{
+                //             // println!("Updated position for player {:?}", rotation);
+                //             player.lives -= 1;
+                //             break;
+                //         }
+                //     }
+                // }
             }
         }
         // else {
