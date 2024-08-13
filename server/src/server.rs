@@ -128,7 +128,7 @@ impl Server {
             let (c, addr) = self.socket.recv_from(&mut buf).await.unwrap();
             
             let cl : Vec<&Client> = self.clients.iter().filter(|c| c.addr == addr).collect();
-            if let Some(pl) = cl.first() {
+            if let Some(_pl) = cl.first() {
                 let msg = String::from_utf8_lossy(&buf[..c]);
 
                 

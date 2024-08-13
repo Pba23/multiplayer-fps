@@ -3,10 +3,9 @@
 use crate::{game::maze::*, Message, ServerDetails};
 pub use bevy::gltf::Gltf;
 pub use bevy::gltf::GltfMesh;
-use bevy::input::gamepad::{GamepadButtonChangedEvent, GamepadEvent};
+use bevy::input::gamepad::GamepadEvent;
 use bevy::input::mouse::MouseMotion;
 pub use bevy::prelude::*;
-use bevy::render::mesh;
 pub const WALL_SIZE: f32 = 7.0; // Taille du mur
 
 #[derive(Component)]
@@ -69,12 +68,6 @@ pub fn setup(
         }
     }
 
-    // Choose a random starting position
-    // use rand::seq::SliceRandom;
-    // let mut rng = rand::thread_rng();
-
-    // let (start_x, start_y) = starting_positions[global_data.mess.curr_player.clone().unwrap().id as usize -1 ];
-    // Setup player entity at the chosen starting position
     for pl in &global_data.mess.players.clone().unwrap() {
         let (start_x, start_y) = starting_positions[pl.id as usize - 1];
         // if let Some(model) = &player_model.0 {
@@ -110,31 +103,6 @@ pub fn setup(
                 ..Default::default()
             });
             entity.insert(OtherPlayer { id: pl.id });
-
-
-            // let cylinder = Mesh::from(bevy::render::mesh::shape::Cylinder {
-            //     radius: 1.0,
-            //     height: 5.5,
-            //     resolution: 16, // Nombre de segments dans le cercle de base
-            //     segments: 8,    // Nombre de segments le long de la hauteur
-            // });
-        
-            // // Ajouter l'entité cylindre
-            // let mut entity =commands.spawn(PbrBundle {
-            //     mesh: meshes.add(cylinder),
-            //     material: materials.add(StandardMaterial {
-            //         base_color: Color::rgb(0.7, 0.2, 0.2),
-            //         ..Default::default()
-            //     }),
-            //     transform: Transform::from_xyz(start_x as f32 * WALL_SIZE, 0.,  -(start_y as f32) * WALL_SIZE),
-            //     ..Default::default()
-            // });
-            // entity.insert(OtherPlayer { id: pl.id });
-
-
-
-
-
         }
 
     }
@@ -205,12 +173,10 @@ pub fn player_movement(
     _gamepad_evr: EventReader<GamepadEvent>,
     axes: Res<Axis<GamepadAxis>>,
     buttons: Res<Input<GamepadButton>>,
-    mut button_evr: EventReader<GamepadButtonChangedEvent>,
     mut mouse_motion_events: EventReader<MouseMotion>,
     global_data: Res<ServerDetails>,
 ) {
     let mut direction = Vec3::ZERO;
-    let mut rotation: Quat;
     let mut rotation_delta = 0.0;
     let current_position: Vec3;
     let mut current_rotation: Quat;
@@ -279,7 +245,7 @@ pub fn player_movement(
                 level: None,
                 players: None,
                 curr_player: None,
-                position: Some(crate::Vec3::fromV3(
+                position: Some(crate::Vec3::from_v3(
                     new_position.x,
                     current_position.y * 0.05,
                     new_position.z,
@@ -290,7 +256,7 @@ pub fn player_movement(
             let json_data = serde_json::to_string(&mes).unwrap();
             global_data
                 .socket
-                .send_to(json_data.as_bytes(), global_data.ip_address.clone());
+                .send_to(json_data.as_bytes(), global_data.ip_address.clone()).expect("Failed to send message");
         }
         // Deuxième passe : appliquer les changements
         player_transform.translation = new_position;

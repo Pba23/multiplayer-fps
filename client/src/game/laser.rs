@@ -1,7 +1,7 @@
 pub use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use crate::game::cylinder;
-use crate::{game::interface_in_3d::*, Message, ServerDetails , game::vector3d::*};
+use crate::{game::interface_in_3d::*, ServerDetails , game::vector3d::*};
 
 use super::cylinder::Object;
 
@@ -9,17 +9,12 @@ use super::cylinder::Object;
 pub struct Laser {
     pub origin : Vec3,
     pub lifetime: Timer,
-    pub hitpoint : Option<hit_info>
+    pub hitpoint : Option<HitInfo>
 }
 #[derive(Debug , Clone, Copy , Serialize, Deserialize)]
-pub struct hit_info {
+pub struct HitInfo {
     pub point : Vec3,
     pub playerid : u32
-}
-#[derive(Component)]
-struct PlayerInfo {
-    pub id: u32,
-    // Ajoutez d'autres champs nécessaires ici
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,18 +23,16 @@ pub struct  ShootMessage {
     pub origin : Vec3,
     pub direction : Vec3,
     pub senderid : u32,
-    pub hitpoint : Option<hit_info>
+    pub hitpoint : Option<HitInfo>
 }
 
 
 pub fn player_shoot(
     mut commands: Commands,
     mouse_button_input: Res<Input<MouseButton>>,
-    gamepad_button: Res<Input<GamepadButton>>,
     player_query: Query<&Transform, With<Player>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    time: Res<Time>,
     buttons: Res<Input<GamepadButton>>,
     mut globaldata : ResMut<ServerDetails>
 
@@ -111,9 +104,7 @@ pub fn update_laser_positions(
 pub fn check_laser_collisions(
     mut commands: Commands,
     laser_query: Query<(Entity, &Transform, &Laser)>,
-    // player_query: Query<(Entity, &Transform), With<Wall>>,
     walls :  Query<&Transform, With<Wall>>,
-    mut globaldata : ResMut<ServerDetails>, 
 ) {
     for (laser_entity, laser_transform, laser) in laser_query.iter() {
         if laser.lifetime.finished() || will_collide_with_wall(laser_transform.translation, &walls) {
@@ -150,7 +141,7 @@ pub fn check_laser_collisions(
 }
 
 
-fn intersect_cylinder(ray: cylinder::Ray , players: Option<Vec<crate::Player>>) -> Option<hit_info> {
+fn intersect_cylinder(ray: cylinder::Ray , players: Option<Vec<crate::Player>>) -> Option<HitInfo> {
     if players.is_none() {
         return None
     }
@@ -176,7 +167,7 @@ fn intersect_cylinder(ray: cylinder::Ray , players: Option<Vec<crate::Player>>) 
             p = (id , point)
         }
     }
-    Some(hit_info { point: p.1, playerid: p.0 })
+    Some(HitInfo { point: p.1, playerid: p.0 })
 }
 
 fn point_a_droite(forward: Vec3) -> Vec3 {
@@ -186,7 +177,7 @@ fn point_a_droite(forward: Vec3) -> Vec3 {
     // Calcul du nouveau point à la distance donnée à droite
     right * distance
 }
-pub fn delete_dead_players(mut commands: Commands , curr_player : Query<(Entity , &mut Transform), With<Player>>,
+pub fn delete_dead_players(mut commands: Commands ,
     mut player_query: Query<(Entity  , &OtherPlayer), With<OtherPlayer>>,
     mut globaldata: ResMut<ServerDetails>) {
 
@@ -210,7 +201,6 @@ pub fn delete_dead_players(mut commands: Commands , curr_player : Query<(Entity 
             } else {
                 globaldata.mess.players = Some(c);
             }
-            println!("COUNT {}", player_query.iter_mut().count());
         }
 
 }

@@ -77,7 +77,7 @@ impl Vec3 {
     pub fn to_v3(&self) -> math::Vec3 {
         math::Vec3::new(self.x , self.y , self.z)
     }
-    pub fn fromV3(x : f32 , y : f32 , z : f32) -> Self {
+    pub fn from_v3(x : f32 , y : f32 , z : f32) -> Self {
         Self{x , y  , z}
     }
 }
@@ -103,7 +103,7 @@ fn main() {
     println!("Waiting for the game to start");
     let mut buf = [0; 1024];
     let mut mess = Message{action : String::new() , level : None , players : None , curr_player : None , position : None , senderid : None , rotation : None};
-
+    println!("message {:?}" , mess);
 
     loop {
         let (c, _addr) = socket.recv_from(&mut buf).unwrap();
