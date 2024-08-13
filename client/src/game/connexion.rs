@@ -56,6 +56,9 @@ pub fn update_ressources(channel : Res<MyChannel> ,  mut globaldata : ResMut<Ser
                         player = Some(pl)
                     }
                 }
+                if player.is_none() {
+                    continue;
+                }
                 let player = player.unwrap();
                 if player.position.is_some() {
                  

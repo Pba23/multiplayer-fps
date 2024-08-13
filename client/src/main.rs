@@ -140,11 +140,11 @@ fn main() {
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_startup_system(setup_fps_counter)
         .add_system(update_fps_text)
-        .add_system(player_shoot)
+        .add_system(player_shoot.run_if(player_is_alive))
         .add_system(update_ressources)
         .add_system(update_laser_positions)
         .add_system(check_laser_collisions)
-        .add_system(player_movement)
+        .add_system(player_movement.run_if(player_is_alive))
         .add_system(update_position)
         .add_system(camera_follow_player)
         .add_system(update_radar) 
@@ -162,6 +162,17 @@ fn getcurrplayer(m: Message, s: String) -> Option<Player> {
         }
     }
     None
+}
+
+fn player_is_alive(server_details: Res<ServerDetails>) -> bool {
+    if let Some(curr_player) = &server_details.mess.curr_player {
+        if let Some(players) = &server_details.mess.players {
+            if let Some(player) = players.iter().find(|p| p.id == curr_player.id) {
+                return player.lives > 0;
+            }
+        }
+    }
+    false
 }
 
 // Prompt function to capture user input from the terminal

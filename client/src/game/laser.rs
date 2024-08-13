@@ -56,7 +56,7 @@ pub fn player_shoot(
         let laser = Laser {
             origin : player_transform.translation ,
             lifetime : Timer::from_seconds(5.0,TimerMode::Once),
-            hitpoint : intersect_cylinder(cylinder::Ray{origin : Vector3D::from_v3(player_transform.translation) , direction :  Vector3D::from_v3(ray_direction)} , globaldata.mess.players.clone().unwrap() ) 
+            hitpoint : intersect_cylinder(cylinder::Ray{origin : Vector3D::from_v3(player_transform.translation) , direction :  Vector3D::from_v3(ray_direction)} , globaldata.mess.players.clone() ) 
         };
         // Créer le laser
         commands.spawn((
@@ -113,11 +113,11 @@ pub fn check_laser_collisions(
 
                 if let Some(players) = &mut globaldata.mess.players {
                     for player in players.iter_mut() {
-                        if player.id == laser.hitpoint.unwrap().playerid && player.lives > 0{
+                        // if player.id == laser.hitpoint.unwrap().playerid && player.lives > 0{
                             // println!("Updated position for player {:?}", rotation);
                             player.lives -= 1;
                             break;
-                        }
+                        // }
                     }
                 }
             }
@@ -137,7 +137,11 @@ pub fn check_laser_collisions(
 }
 
 
-fn intersect_cylinder(ray: cylinder::Ray , players: Vec<crate::Player>) -> Option<hit_info> {
+fn intersect_cylinder(ray: cylinder::Ray , players: Option<Vec<crate::Player>>) -> Option<hit_info> {
+    if players.is_none() {
+        return None
+    }
+    let players = players.unwrap();
     let mut res = Vec::new();
     for p in players {
         if let  Some(position) = p.position {
@@ -174,18 +178,24 @@ pub fn delete_dead_players(mut commands: Commands , curr_player : Query<(Entity 
     mut globaldata: ResMut<ServerDetails>) {
 
         if let Some(players) = &globaldata.mess.players {
-            println!("find player {}", player_query.iter_mut().count());
-
+            // println!("find player {}", player_query.iter_mut().count());
+            // let (currentity , c)  = curr_player.get_single().unwrap();
+            // let currid = globaldata.mess.curr_player.clone().unwrap().id;
             for (entity ,   player) in player_query.iter_mut() {
                 for global_player in players {
                     if global_player.id == player.id {
                         if global_player.lives == 0 {
-                            // commands.entity(entity).despawn();
-                            commands.entity(entity).despawn_recursive()
+                            commands.entity(entity).despawn_recursive();
                         }
-                    } 
-                    
+                    }
                 }
+            }
+            let mut  c = players.clone();
+            c.retain(|p|  p.lives > 0);
+            if c.len() == 0 {
+                globaldata.mess.players = None;
+            } else {
+                globaldata.mess.players = Some(c);
             }
             println!("COUNT {}", player_query.iter_mut().count());
         }
