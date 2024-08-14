@@ -13,13 +13,18 @@ pub fn setup_fps_counter(mut commands: Commands, asset_server: Res<AssetServer>)
                 "FPS: ",
                 TextStyle {
                     font: asset_server.load("FiraSans-Bold.ttf"),
-                    font_size: 50.0,
+                    font_size: 25.0,
                     color: Color::WHITE,
                 },
             ),
             TextSection::from_style(TextStyle {
                 font: asset_server.load("FiraSans-Bold.ttf"),
-                font_size: 50.0,
+                font_size: 25.0,
+                color: Color::GOLD,
+            }),
+            TextSection::from_style(TextStyle {
+                font: asset_server.load("FiraSans-Bold.ttf"),
+                font_size: 0.0,
                 color: Color::GOLD,
             }),
         ])
@@ -37,7 +42,7 @@ pub fn update_fps_text(mut query: Query<&mut Text, With<FpsText>>, diagnostics: 
     if let Some(fps) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS) {
         if let Some(average) = fps.average() {
             if let Ok(mut text) = query.get_single_mut() {
-                text.sections[1].value = format!("{:.2}", 30.0+average);
+                text.sections[2].value = format!("{:.2}", average);
             }
         }
     }

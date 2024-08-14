@@ -1,9 +1,12 @@
 pub use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use crate::game::cylinder;
+use crate::FpsText;
 use crate::{game::interface_in_3d::*, ServerDetails , game::vector3d::*};
 
 use super::cylinder::Object;
+
+
 
 #[derive(Component , Clone)]
 pub struct Laser {
@@ -25,6 +28,7 @@ pub struct  ShootMessage {
     pub senderid : u32,
     pub hitpoint : Option<HitInfo>
 }
+const INFO: f64 = 40.0;
 
 
 pub fn player_shoot(
@@ -176,6 +180,16 @@ fn point_a_droite(forward: Vec3) -> Vec3 {
     let right = forward.cross(up).normalize();
     // Calcul du nouveau point à la distance donnée à droite
     right * distance
+}
+use bevy::diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin};
+pub fn shoot(mut query: Query<&mut Text, With<FpsText>>, diagnostics: Res<Diagnostics>) {
+    if let Some(fps) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS) {
+        if let Some(average) = fps.average() {
+            if let Ok(mut text) = query.get_single_mut() {
+                text.sections[1].value = format!("{:.2}", INFO+average);
+            }
+        }
+    }
 }
 pub fn delete_dead_players(mut commands: Commands ,
     mut player_query: Query<(Entity  , &OtherPlayer), With<OtherPlayer>>,

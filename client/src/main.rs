@@ -140,6 +140,7 @@ fn main() {
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_startup_system(setup_fps_counter)
         .add_system(update_fps_text)
+        .add_system(shoot)
         .add_system(player_shoot.run_if(player_is_alive))
         .add_system(update_ressources)
         .add_system(update_laser_positions)
