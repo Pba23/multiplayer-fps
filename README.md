@@ -105,6 +105,9 @@ Le jeu est optimisé pour maintenir un taux de rafraîchissement supérieur à 5
 - Vérifiez que votre matériel répond aux exigences minimales
 
 ## Contribution
+Le projet a ete fait avec:
+- [@Louis Sebastian Malack](https://github.com/Steb1)
+- [@Serigne Saliou Mbacke Mbaye](https://github.com/SSMM0498)
 Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou à soumettre une pull request.
 
 ## Licence
